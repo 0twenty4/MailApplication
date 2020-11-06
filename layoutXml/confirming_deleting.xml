@@ -1,0 +1,83 @@
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/confirming_deleting"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="@drawable/background">
+
+    <TextView
+        android:id="@+id/confirming_deleting_you_sure"
+        android:layout_width="330dp"
+        android:layout_height="wrap_content"
+        android:text="@string/you_sure_delete_message"
+        android:textAlignment="center"
+        android:textColor="@color/black"
+        android:textSize="25sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <View
+        android:id="@+id/confirming_divider_dash_horizontal"
+        android:layout_width="330dp"
+        android:layout_height="2dp"
+        android:layout_marginTop="5dp"
+        android:background="@color/bright_grey"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/confirming_deleting_you_sure" />
+
+    <View
+        android:id="@+id/confirming_deleting_divider_dash_vertical"
+        android:layout_width="1dp"
+        android:layout_height="47dp"
+        android:background="@color/bright_grey"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/confirming_divider_dash_horizontal" />
+
+    <TextView
+        android:id="@+id/confirming_deleting_yes"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="10dp"
+        android:text="@string/yes"
+        android:textColor="@color/black"
+        android:textSize="20sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/confirming_deleting_divider_dash_vertical"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/confirming_divider_dash_horizontal" />
+
+    <TextView
+        android:id="@+id/confirming_deleting_no"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="10dp"
+        android:text="@string/no"
+        android:textColor="@color/black"
+        android:textSize="20sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toEndOf="@+id/confirming_deleting_divider_dash_vertical"
+        app:layout_constraintTop_toBottomOf="@+id/confirming_divider_dash_horizontal" />
+
+    <android.support.constraint.Guideline
+        android:id="@+id/guideline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_begin="330dp" />
+
+    <android.support.constraint.Guideline
+        android:id="@+id/guideline2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_begin="117dp" />
+
+</android.support.constraint.ConstraintLayout>
