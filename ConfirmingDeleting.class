@@ -1,0 +1,61 @@
+package com.example.mailapplication;
+
+import android.animation.Animator;
+import android.graphics.drawable.Drawable;
+import android.support.v4.app.Fragment;
+import android.support.v7.app.AppCompatActivity;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.LayoutInflater;
+import android.os.Bundle;
+import android.view.ViewPropertyAnimator;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
+import android.view.animation.LinearInterpolator;
+import android.widget.FrameLayout;
+
+public class ConfirmingDeleting extends Fragment {
+
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        return inflater.inflate(R.layout.confirming_deleting, container, false);
+    }
+
+    public Animation onCreateAnimation(int animation, boolean enter, int animationNext) {
+        final AppCompatActivity mainMenu=EMailService.getCurrentActivity();
+        final int animationId=R.anim.plug;
+        System.out.println("hello");
+        final Animation animationConfirmingDeletingFragment=AnimationUtils.loadAnimation(mainMenu, animationId);
+        animationConfirmingDeletingFragment.setAnimationListener(new EMailService() {
+            public void onAnimationEnd(Animation animation) {
+                System.out.println("im here");
+                final float fromAlpha;
+                final float toAlpha;
+                final FrameLayout mainMenuConfirmingDeletingLayout=mainMenu.findViewById(R.id.main_menu_confirming_deleting_layout);
+                final View confirmingDeletingView=getView();
+                ViewPropertyAnimator confirmingDeletingViewAnimator=confirmingDeletingView.animate()
+                        .setDuration(1000)
+                        .setInterpolator(new LinearInterpolator());
+                if (enter) {
+                    fromAlpha=0.0f;
+                    toAlpha = 1.0f;
+                    confirmingDeletingViewAnimator.setListener(new EMailService() {
+                        public void onAnimationEnd(Animator animator){
+                            Drawable background=mainMenu.getDrawable(R.drawable.background_main_menu_confirming_deleting_layout);
+                            mainMenuConfirmingDeletingLayout.setBackground(background);
+                        }
+                    });
+                }
+                else {
+                    mainMenuConfirmingDeletingLayout.setBackground(null);
+                    fromAlpha=1.0f;
+                    toAlpha = 0.0f;
+                }
+                confirmingDeletingView.setAlpha(fromAlpha);
+                confirmingDeletingViewAnimator
+                        .alpha(toAlpha)
+                        .start();
+            }
+        });
+        return animationConfirmingDeletingFragment;
+    }
+}
