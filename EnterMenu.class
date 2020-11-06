@@ -1,0 +1,39 @@
+package com.example.mailapplication;
+
+import android.animation.Animator;
+import android.animation.ValueAnimator;
+import android.content.Intent;
+import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
+import android.widget.ImageView;
+
+public class EnterMenu extends AppCompatActivity {
+
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.enter_menu);
+    }
+
+    public void onStart() {
+        super.onStart();
+        EMailService.setCurrentActivity(this, R.id.enter_menu);
+        ImageView eMailLogo=findViewById(R.id.email_logo);
+        int grey=getColor(R.color.grey);
+        int blue=getColor(R.color.main_color);
+        ValueAnimator eMailLogoAnimator=ValueAnimator.ofArgb(grey, blue).setDuration(3000);
+        eMailLogoAnimator.addUpdateListener(new EMailService() {
+            public void onAnimationUpdate(ValueAnimator animator) {
+                eMailLogo.setColorFilter((int) animator.getAnimatedValue());
+            }
+        });
+        eMailLogoAnimator.addListener(new EMailService() {
+            public void onAnimationEnd(Animator animator) {
+                Intent intent=new Intent(EnterMenu.this, SignInMenu.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(intent);
+            }
+        });
+        eMailLogoAnimator.start();
+    }
+}
