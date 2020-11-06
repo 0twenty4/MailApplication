@@ -1,0 +1,736 @@
+package com.example.mailapplication;
+
+import android.animation.Animator;
+import android.animation.ValueAnimator;
+import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.net.Uri;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentTransaction;
+import android.support.v7.app.AppCompatActivity;
+import android.util.Base64;
+import android.view.View;
+import android.view.animation.Animation;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import static android.view.View.GONE;
+import static android.view.View.VISIBLE;
+import java.io.BufferedInputStream;
+import java.net.URL;
+import java.net.URLConnection;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
+import java.text.SimpleDateFormat;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import javax.activation.CommandMap;
+import javax.activation.MailcapCommandMap;
+import javax.mail.Address;
+import javax.mail.Folder;
+import javax.mail.Message;
+import javax.mail.Multipart;
+import javax.mail.Part;
+import javax.mail.Session;
+import javax.mail.Store;
+import javax.mail.Transport;
+import java.io.InputStream;
+
+public abstract class EMailService implements Animation.AnimationListener, ValueAnimator.AnimatorListener, ValueAnimator.AnimatorUpdateListener,
+                                    View.OnClickListener, View.OnLongClickListener, View.OnFocusChangeListener{
+    private static String currentUserLogin;
+    private static String currentUserPassword;
+    private static AppCompatActivity currentActivity;
+    private static FragmentManager currentActivityFragmentLoadingLayoutId;
+    private static int currentActivityLayoutForFragmentLoadingId;
+    private static final Session session;
+    private static Transport transport;
+    private static Store store;
+    private static Folder folder;
+    private static List<Message> eMailMessagesAll;
+    private static final ArrayList<EMailMessage> eMailMessagesLoaded = new ArrayList<>();
+    private static final ArrayList<EMailMessage> eMailMessagesDisplayed = new ArrayList<>();
+    private static int eMailMessagesLoadedAmount;
+    private static final int LOAD_AMOUNT = 20;
+    private static final int DISPLAY_AMOUNT = 15;
+    private static EMailMessage firstDisplayedEMailMessage;
+    private static Fragment currentFragmentLoading;
+    private static Fragment loadMore;
+    private static final String MULTIPART = "multipart/*";
+    private static final String TEXT_PLAIN = "text/plain";
+    private static final String TEXT_HTML = "text/html";
+    private static final String MESSAGE_RFC822 = "message/rfc822";
+    private static final String IMAGE_PNG = "image/png";
+    private static final String IMAGE_JPEG= "image/jpeg";
+    private static final String IMAGE="image";
+    private static final String HTTP="http://";
+    private static final String HTTPS="https://";
+    private static final String UNKNOWN_CONTENT_TYPE="unknown content type";
+    private static boolean currentEMailMessageHasContentHtml;
+    private static final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private static EMailMessage currentEMailMessage;
+    private static boolean hasDisplayedMessages;
+    private static boolean hasLogOut;
+    private static boolean mainMenuDeletingMode;
+    private static int currentMainMenuScrollY;
+
+
+    static {
+        Properties properties = new Properties();
+        properties.put("mail.transport.protocol", "smtp");
+        properties.put("mail.smtp.host", "smtp.gmail.com");
+        properties.put("mail.smtp.port", "587");
+        properties.put("mail.smtp.auth", "true");
+        properties.put("mail.smtp.starttls.enable", "true");
+        properties.put("mail.store.protocol", "imaps");
+        properties.put("mail.imaps.host", "imap.gmail.com");
+        properties.put("mail.imaps.port", "993");
+        properties.put("mail.imaps.auth", "true");
+
+        session = Session.getInstance(properties, null);
+        MailcapCommandMap mailApplicationMailcapCommandMap = (MailcapCommandMap) CommandMap.getDefaultCommandMap();
+        mailApplicationMailcapCommandMap.addMailcap("text/html;; x-java-content-handler=com.sun.mail.handlers.text_html");
+        mailApplicationMailcapCommandMap.addMailcap("text/xml;; x-java-content-handler=com.sun.mail.handlers.text_xml");
+        mailApplicationMailcapCommandMap.addMailcap("text/plain;; x-java-content-handler=com.sun.mail.handlers.text_plain");
+        mailApplicationMailcapCommandMap.addMailcap("multipart/*;; x-java-content-handler=com.sun.mail.handlers.multipart_mixed");
+        mailApplicationMailcapCommandMap.addMailcap("message/rfc822;; x-java-content-handler=com.mail.handlers.message_rfc822");
+        CommandMap.setDefaultCommandMap(mailApplicationMailcapCommandMap);
+    }
+
+    public static AppCompatActivity getCurrentActivity() {
+        return currentActivity;
+    }
+
+    public static int getCurrentActivityLayoutForFragmentLoadingId() {
+        return currentActivityLayoutForFragmentLoadingId;
+    }
+
+    public static boolean hasLogOut() {
+        return hasLogOut;
+    }
+
+    public static void setCurrentActivity(AppCompatActivity activity, int viewGroup) {
+        currentActivity = activity;
+        currentActivityLayoutForFragmentLoadingId = viewGroup;
+        currentActivityFragmentLoadingLayoutId = activity.getSupportFragmentManager();
+    }
+
+    public static void setMainMenuDeletingMode(boolean isOn) {
+        mainMenuDeletingMode=isOn;
+        final int viewVisibility;
+        if (isOn)
+            viewVisibility=VISIBLE;
+        else
+            viewVisibility=GONE;
+        for (EMailMessage eMailMessage:eMailMessagesDisplayed) {
+            ImageView eMailMessageDelete=eMailMessage.getView().findViewById(R.id.email_message_delete);
+            eMailMessageDelete.setVisibility(viewVisibility);
+            if (!isOn && eMailMessage.ticked) {
+                eMailMessage.ticked=false;
+                int white=currentActivity.getColor(R.color.white);
+                int grey=currentActivity.getColor(R.color.bright_grey);
+                View eMailMessageView=eMailMessage.getView();
+                ImageView eMailMessageTick=eMailMessage.getView().findViewById(R.id.email_message_tick);
+                eMailMessageTick.setVisibility(GONE);
+                ValueAnimator eMailMessageViewAnimator=ValueAnimator.ofArgb(grey, white);
+                eMailMessageViewAnimator.addUpdateListener(new EMailService() {
+                    public void onAnimationUpdate(ValueAnimator animator) {
+                        eMailMessageView.setBackgroundColor((int) animator.getAnimatedValue());
+                    }
+                });
+                eMailMessageViewAnimator.setDuration(300);
+                eMailMessageViewAnimator.start();
+            }
+        }
+        ImageView mainMenuTick=currentActivity.findViewById(R.id.main_menu_tick);
+        mainMenuTick.setVisibility(viewVisibility);
+        ImageView mainMenuDelete=currentActivity.findViewById(R.id.main_menu_delete);
+        mainMenuDelete.setVisibility(viewVisibility);
+
+    }
+
+    public static boolean getMainMenuDeletingMode() {
+        return mainMenuDeletingMode;
+    }
+
+    public static void loadUser(String login, String password) {
+        currentUserLogin = login;
+        currentUserPassword = password;
+    }
+
+    public static boolean loginEmpty(TextView login) {
+        return login.getText().toString().isEmpty();
+    }
+
+    public static boolean loginCorrect(TextView login) {
+        boolean loginCorrect = false;
+        String loginString = login.getText().toString();
+        char[] charactersLoginString = loginString.toCharArray();
+        LinkedList<Character> symbolsLoginString = new LinkedList<>();
+        for (char character : charactersLoginString) {
+            if (character != ' ') symbolsLoginString.add(character);
+        }
+        boolean hasNoSpace = true;
+        if (!(charactersLoginString.length == symbolsLoginString.size())) {
+            for (int i = 0; i < symbolsLoginString.size(); i++) {
+                if (charactersLoginString[i] == ' ') {
+                    hasNoSpace = false;
+                    break;
+                }
+            }
+        }
+        if (hasNoSpace) {
+            int atSignIndex = loginString.indexOf('@');
+            if (atSignIndex != -1) {
+                if (loginString.charAt(atSignIndex + 1) != '.') {
+                    if (!loginString.substring(0, atSignIndex - 1).isEmpty()) {
+                        boolean moreThanOneDotInRow = false;
+                        for (int i = 0; i < atSignIndex - 1; i++) {
+                            if (loginString.charAt(i) == '.' && loginString.charAt(i + 1) == '.') {
+                                moreThanOneDotInRow = true;
+                                break;
+                            }
+                        }
+                        if (!moreThanOneDotInRow) {
+                            String endOfLogin = loginString.substring(atSignIndex + 1);
+                            if (endOfLogin.contains("gmail.com")
+                                    || endOfLogin.contains("yandex.ru")
+                                    || endOfLogin.contains("ya.ru")
+                                    || endOfLogin.contains("mail.ru")) {
+                                char lastSymbolLoginString = symbolsLoginString.getLast();
+                                if (lastSymbolLoginString != '.')
+                                    loginCorrect = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (loginCorrect)
+            return true;
+        else
+            return false;
+    }
+
+    public static boolean passwordEmpty(TextView password) {
+        return password.getText().toString().isEmpty();
+    }
+
+    public static boolean passwordCorrect(TextView password) {
+        boolean passwordCorrect=false;
+        String passwordString = password.getText().toString();
+        if (passwordString.length() >= 8) {
+            char[] charactersPasswordString = passwordString.toCharArray();
+            ArrayList<Character> symbolsPasswordString = new ArrayList<>();
+            for (char character : charactersPasswordString) {
+                if (character != ' ') symbolsPasswordString.add(character);
+            }
+            boolean hasNoSpace = true;
+            if (charactersPasswordString.length != symbolsPasswordString.size()) {
+                for (int i = 0; i < symbolsPasswordString.size(); i++) {
+                    if (charactersPasswordString[i] == ' ') {
+                        hasNoSpace = false;
+                        break;
+                    }
+                }
+            }
+            if (hasNoSpace) {
+                boolean hasNumber = false;
+                boolean hasLetter = false;
+                boolean passwordMatch = false;
+                for (char character : charactersPasswordString) {
+                    if (Character.isDigit(character)) {
+                        hasNumber = true;
+                        if (hasLetter) {
+                            passwordMatch = true;
+                            break;
+                        }
+                    } else if (Character.isLetter(character)) {
+                        hasLetter = true;
+                        if (hasNumber) {
+                            passwordCorrect = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        if (passwordCorrect)
+            return true;
+        else
+            return false;
+    }
+
+    public static void connectToNetwork() {
+        executor.execute((Runnable) () -> {
+            try {
+                currentActivity.runOnUiThread((Runnable) () -> {
+                    currentFragmentLoading = new Connecting();
+                    currentActivityFragmentLoadingLayoutId.beginTransaction()
+                            .setCustomAnimations(R.anim.slide_from_right_to_middle, 0)
+                            .add(currentActivityLayoutForFragmentLoadingId, currentFragmentLoading)
+                            .commit();
+                });
+                transport = session.getTransport();
+                transport.connect(currentUserLogin, currentUserPassword);
+                currentActivity.runOnUiThread((Runnable) () -> {
+                    currentFragmentLoading = new LoadingEMailMessages();
+                    currentActivityFragmentLoadingLayoutId.beginTransaction()
+                            .replace(currentActivityLayoutForFragmentLoadingId, currentFragmentLoading)
+                            .commit();
+
+                });
+                getMessages();
+                loadMessages();
+                currentActivity.runOnUiThread((Runnable) () -> {
+                    Intent intent = new Intent(currentActivity, MainMenu.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    currentActivity.startActivity(intent);
+                });
+
+            } catch (Exception e) {
+                System.out.println(e.getClass().getName());
+                currentActivity.runOnUiThread((Runnable) () -> {
+                    TextView accountNotExist = currentActivity.findViewById(R.id.account_not_exist);
+                    accountNotExist.setVisibility(VISIBLE);
+                    currentActivityFragmentLoadingLayoutId.beginTransaction()
+                            .setCustomAnimations(0, R.anim.slide_from_middle_to_right)
+                            .remove(currentFragmentLoading)
+                            .commit();
+                });
+            }
+        });
+    }
+
+    private static void getMessages() {
+        try {
+            store = session.getStore();
+            store.connect(currentUserLogin, currentUserPassword);
+            folder = store.getFolder("inbox");
+            folder.open(Folder.READ_ONLY);
+            Message[] eMailMessages = folder.getMessages();
+            eMailMessagesAll = Arrays.asList(eMailMessages);
+            Collections.reverse(eMailMessagesAll);
+        } catch (Exception e) {
+        }
+    }
+
+    private static void loadMessages() {
+        try {
+            for (int messageToLoadIndex = eMailMessagesLoadedAmount, messageCount = 0; messageCount < LOAD_AMOUNT; messageCount++, messageToLoadIndex++) {
+                Message receivedMessage = eMailMessagesAll.get(messageToLoadIndex);
+                EMailMessage eMailMessage = loadMessage(receivedMessage);
+                eMailMessagesLoaded.add(eMailMessage);
+                eMailMessagesLoadedAmount++;
+            }
+            eMailMessagesLoadedAmount--;
+        } catch (Exception e) {
+
+        }
+    }
+
+    public static void displayMessages(int eMailMessagesLayout) {
+        if (!hasDisplayedMessages) {
+            currentFragmentLoading = new LoadingProgressBarCircle();
+            currentActivityFragmentLoadingLayoutId.beginTransaction()
+                    .add(currentActivityLayoutForFragmentLoadingId, currentFragmentLoading)
+                    .commit();
+            FragmentTransaction currentActivityFragmentTransaction = currentActivityFragmentLoadingLayoutId.beginTransaction();
+            if (canDisplay(eMailMessagesLayout)) {
+                loadMore = new LoadMore();
+                currentActivityFragmentTransaction.add(eMailMessagesLayout, loadMore);
+            } else {
+                TextView noMessages = currentActivity.findViewById(R.id.no_messages);
+                noMessages.setVisibility(VISIBLE);
+            }
+            hasDisplayedMessages = true;
+            currentActivityFragmentTransaction.remove(currentFragmentLoading).commit();
+        } else
+            returnDisplayedMessages(eMailMessagesLayout);
+    }
+
+    public static void displayMoreMessages(int eMailMessagesLayout) {
+        executor.execute((Runnable) () -> {
+            if (eMailMessagesLoaded.isEmpty())
+                loadMessages();
+            currentActivity.runOnUiThread((Runnable) () -> {
+                FragmentTransaction currentActivityFragmentTransaction = currentActivityFragmentLoadingLayoutId.beginTransaction();
+                if (canDisplay(eMailMessagesLayout)) {
+                    currentActivityFragmentTransaction.remove(loadMore);
+                    loadMore = new LoadMore();
+                    currentActivityFragmentTransaction.add(eMailMessagesLayout, loadMore).commit();
+                } else
+                    currentActivityFragmentTransaction.remove(loadMore).commit();
+            });
+        });
+    }
+
+    private static void display(int eMailMessagesLayout) {
+        canDisplay(eMailMessagesLayout);
+    }
+
+    private static boolean canDisplay(int eMailMessagesLayout) {
+        FragmentTransaction currentActivityFragmentTransaction = currentActivityFragmentLoadingLayoutId.beginTransaction();
+        Iterator<EMailMessage> eMailMessagesLoadedIterator = eMailMessagesLoaded.iterator();
+        int messageCount = 0;
+        while (eMailMessagesLoadedIterator.hasNext() && messageCount < DISPLAY_AMOUNT) {
+            EMailMessage eMailMessage = eMailMessagesLoadedIterator.next();
+            currentActivityFragmentTransaction.add(eMailMessagesLayout, eMailMessage);
+            eMailMessagesLoadedIterator.remove();
+            eMailMessagesDisplayed.add(eMailMessage);
+            messageCount++;
+        }
+        currentActivityFragmentTransaction.commit();
+        firstDisplayedEMailMessage = eMailMessagesDisplayed.get(0);
+        if (messageCount > 0)
+            return true;
+        else
+            return false;
+    }
+
+    public static void returnDisplayedMessages(int eMailMessagesLayout) {
+        Iterator<EMailMessage> eMailMessagesDisplayedIterator = eMailMessagesDisplayed.iterator();
+        FragmentTransaction currentActivityFragmentTransaction = currentActivityFragmentLoadingLayoutId.beginTransaction();
+        while (eMailMessagesDisplayedIterator.hasNext()) {
+            EMailMessage eMailMessage = eMailMessagesDisplayedIterator.next();
+            currentActivityFragmentTransaction.add(eMailMessagesLayout, eMailMessage);
+        }
+        loadMore = new LoadMore();
+        currentActivityFragmentTransaction.add(eMailMessagesLayout, loadMore).commit();
+    }
+
+    public static boolean hasDisplayedMessages() {
+        return hasDisplayedMessages;
+    }
+
+    private static void loadNewMessages() {
+        Iterator<EMailMessage> eMailMessagesDisplayedIterator = eMailMessagesDisplayed.iterator();
+        for (int messageIndex = 0; eMailMessagesDisplayedIterator.hasNext(); messageIndex++) {
+            EMailMessage eMailMessage = eMailMessagesDisplayedIterator.next();
+            eMailMessagesDisplayedIterator.remove();
+            eMailMessagesLoaded.add(messageIndex, eMailMessage);
+        }
+        try {
+            Message[] eMailMessages = folder.getMessages();
+            eMailMessagesAll = Arrays.asList(eMailMessages);
+            Collections.reverse(eMailMessagesAll);
+            Date firstDisplayedEMailMessageSentDate = firstDisplayedEMailMessage.message.getSentDate();
+            for (int messageIndex = 0; true; messageIndex++) {
+                Message receivedMessage = eMailMessagesAll.get(messageIndex);
+                Date receivedMessageSentDate = receivedMessage.getSentDate();
+                if (receivedMessageSentDate.after(firstDisplayedEMailMessageSentDate)) {
+                    EMailMessage eMailMessage = loadMessage(receivedMessage);
+                    eMailMessagesLoaded.add(messageIndex, eMailMessage);
+                    eMailMessagesLoadedAmount++;
+                } else
+                    break;
+            }
+        } catch (Exception e) {
+
+        }
+    }
+
+    public static void refresh(int eMailMessagesLayout) {
+        currentFragmentLoading = new LoadingProgressBarCircle();
+        currentActivityFragmentLoadingLayoutId.beginTransaction()
+                .add(currentActivityLayoutForFragmentLoadingId, currentFragmentLoading)
+                .commit();
+        if (mainMenuDeletingMode)
+            mainMenuDeletingMode=false;
+        FragmentTransaction currentActivityFragmentTransaction = currentActivityFragmentLoadingLayoutId.beginTransaction();
+        for (EMailMessage eMailMessage : eMailMessagesDisplayed) {
+            currentActivityFragmentTransaction.remove(eMailMessage);
+        }
+        currentActivityFragmentTransaction.remove(loadMore).commit();
+        executor.execute((Runnable) () -> {
+            loadNewMessages();
+            currentActivity.runOnUiThread((Runnable) () -> {
+                display(eMailMessagesLayout);
+                currentActivityFragmentLoadingLayoutId.beginTransaction()
+                        .remove(currentFragmentLoading)
+                        .commit();
+                loadMore = new LoadMore();
+                currentActivityFragmentLoadingLayoutId.beginTransaction()
+                        .add(eMailMessagesLayout, loadMore)
+                        .commit();
+                Fragment currentActivityShowMoreFragment= currentActivityFragmentLoadingLayoutId.findFragmentByTag("main menu show more");
+                TextView refresh=currentActivityShowMoreFragment.getView().findViewById(R.id.main_menu_show_more_refresh);
+                refresh.setClickable(true);
+            });
+        });
+    }
+
+
+    private static EMailMessage loadMessage(Message message) {
+        try {
+            EMailMessage eMailMessage = new EMailMessage();
+            Address[] messageFromAddresses = message.getFrom();
+            int fromAddressesAmount = messageFromAddresses.length;
+            String[] messageFrom = new String[fromAddressesAmount];
+            for (int fromAddressCount = 0; fromAddressCount < messageFromAddresses.length; fromAddressCount++) {
+                messageFrom[fromAddressCount] = messageFromAddresses[fromAddressCount].toString();
+            }
+            String messageSubject = message.getSubject();
+            Date messageDate = message.getSentDate();
+            String messageSentDate = formatSentDate(messageDate);
+            eMailMessage.setData(message, messageFrom, messageSubject, messageSentDate);
+            return eMailMessage;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public static void loadEMailMessageContent() {
+        currentFragmentLoading = new LoadingProgressBarCircle();
+        currentActivityFragmentLoadingLayoutId.beginTransaction()
+                .add(currentActivityLayoutForFragmentLoadingId, currentFragmentLoading)
+                .commit();
+        executor.execute(new Runnable() {
+            final HashMap<String, Object> eMailMessageContentTypeAndContent=new HashMap<>();
+            public void run() {
+                try {
+                Part eMailMessageContent = currentEMailMessage.message;
+                if (eMailMessageContent.isMimeType(MULTIPART)) {
+                    System.out.println(eMailMessageContent.getContentType());
+                    Multipart eMailMessageContentMultipart=(Multipart) eMailMessageContent.getContent();
+                    int eMailMessageContentPartAmount=eMailMessageContentMultipart.getCount();
+                    for (int i=0; i<eMailMessageContentPartAmount; i++) {
+                        Part eMailMessageContentPart=eMailMessageContentMultipart.getBodyPart(i);
+                        HashMap<String, Object> partContentTypeAndContent=loadEMailMessageContent(eMailMessageContentPart);
+                        eMailMessageContentTypeAndContent.putAll(partContentTypeAndContent);
+                    }
+                } else {
+                    HashMap<String, Object> messageContentTypeAndContent = loadEMailMessageContent(eMailMessageContent);
+                    eMailMessageContentTypeAndContent.putAll(messageContentTypeAndContent);
+                }
+                currentActivity.runOnUiThread((Runnable) () -> {
+                    LinearLayout currentEMailMessageContentLayout=currentActivity.findViewById(R.id.email_message_open_content_layout);
+                    Iterator<Map.Entry<String, Object>> eMailMessageContentTypeAndContentIterator=eMailMessageContentTypeAndContent.entrySet().iterator();
+                    while (eMailMessageContentTypeAndContentIterator.hasNext()) {
+                        Map.Entry<String,Object> contentTypeAndContent=eMailMessageContentTypeAndContentIterator.next();
+                        String contentType=contentTypeAndContent.getKey();
+                        Object content=contentTypeAndContent.getValue();
+                        if (contentType.equals(TEXT_PLAIN) && !currentEMailMessageHasContentHtml) {
+                            TextView contentText=new TextView(currentActivity);
+                            contentText.setText((String) content);
+                            contentText.setTextSize(20);
+                            int black=currentActivity.getColor(R.color.black);
+                            contentText.setTextColor(black);
+                            currentEMailMessageContentLayout.addView(contentText);
+                        } else if (contentType.equals(TEXT_HTML)) {
+                            WebView contentWeb=new WebView(currentActivity);
+                            contentWeb.setWebViewClient(new WebViewClient() {
+
+                                public boolean shouldOverrideUrlLoading(WebView webView, WebResourceRequest request) {
+                                    if (request!=null) {
+                                        String currentUrlString = request.getUrl().toString();
+                                        Uri currentUri = Uri.parse(currentUrlString);
+                                        Intent intent = new Intent(Intent.ACTION_VIEW, currentUri);
+                                        Intent intentChooser=Intent.createChooser(intent, "Select an app");
+                                        currentActivity.startActivity(intentChooser);
+                                        return true;
+                                    } else
+                                        return false;
+                                }
+
+                                public WebResourceResponse shouldInterceptRequest(WebView webView, WebResourceRequest request) {
+                                    try {
+                                        String currentUrlString = request.getUrl().toString();
+                                        if (currentUrlString.startsWith(HTTP)) {
+                                            String correctUrlString = currentUrlString.replace(HTTP, HTTPS);
+                                            URL correctUrl = new URL(correctUrlString);
+                                            URLConnection correctUrlConnection = correctUrl.openConnection();
+                                            String correctUrlContentType = correctUrlConnection.getContentType();
+                                            String correctUrlContentEncoding = correctUrlConnection.getContentEncoding();
+                                            InputStream correctUrlContentInputStream = correctUrlConnection.getInputStream();
+                                            WebResourceResponse correctWebResourceResponse = new WebResourceResponse(correctUrlContentType,
+                                                    correctUrlContentEncoding,
+                                                    correctUrlContentInputStream);
+                                            return correctWebResourceResponse;
+                                        } else
+                                            return super.shouldInterceptRequest(webView, request);
+                                    } catch (Exception e) {
+                                        return null;
+                                    }
+                                }
+                            });
+                            WebSettings contentWebSettings=contentWeb.getSettings();
+                            contentWebSettings.setJavaScriptEnabled(true);
+                            contentWeb.loadData((String) content, TEXT_HTML, "base64");
+                            currentEMailMessageContentLayout.addView(contentWeb);
+                        } else if (contentType.equals(IMAGE)) {
+                            ImageView contentImage = new ImageView(currentActivity);
+                            contentImage.setImageBitmap((Bitmap) content);
+                            currentEMailMessageContentLayout.addView(contentImage);
+                        } else if (contentType.equals(UNKNOWN_CONTENT_TYPE)) {
+                            TextView unknownContentType=new TextView(currentActivity);
+                            unknownContentType.setText(R.string.unknown_content_type);
+                            unknownContentType.setTextSize(20);
+                            int blue=currentActivity.getColor(R.color.main_color);
+                            unknownContentType.setTextColor(blue);
+                            currentEMailMessageContentLayout.addView(unknownContentType);
+                        }
+                        currentActivityFragmentLoadingLayoutId.beginTransaction()
+                                .remove(currentFragmentLoading)
+                                .commit();
+                    }
+                });
+            } catch (Exception e) {
+
+            }
+        }
+    });
+    }
+
+    private static HashMap<String, Object> loadEMailMessageContent(Part eMailMessageContentPart) throws Exception {
+        if (eMailMessageContentPart.isMimeType(TEXT_PLAIN)) {
+            HashMap<String, Object> partContentTypeAndContent = new HashMap<>();
+            Object content = eMailMessageContentPart.getContent();
+            partContentTypeAndContent.put(TEXT_PLAIN, content);
+            return partContentTypeAndContent;
+        } else if (eMailMessageContentPart.isMimeType(TEXT_HTML)) {
+            HashMap<String, Object> partContentTypeAndContent = new HashMap<>();
+            String htmlString = (String) eMailMessageContentPart.getContent();
+            Object content = Base64.encodeToString(htmlString.getBytes(), Base64.DEFAULT);
+            partContentTypeAndContent.put(TEXT_HTML, content);
+            currentEMailMessageHasContentHtml=true;
+            return partContentTypeAndContent;
+        } else if (eMailMessageContentPart.isMimeType(IMAGE_PNG) || eMailMessageContentPart.isMimeType(IMAGE_JPEG)) {
+            HashMap<String, Object> partContentTypeAndContent = new HashMap<>();
+            InputStream contentStream = eMailMessageContentPart.getInputStream();
+            Object content = BitmapFactory.decodeStream(new BufferedInputStream(contentStream));
+            partContentTypeAndContent.put(IMAGE, content);
+            return partContentTypeAndContent;
+        } else if (eMailMessageContentPart.isMimeType(MULTIPART)) {
+            Multipart eMailMessageContentMultipart=(Multipart) eMailMessageContentPart.getContent();
+            int eMailMessageContentPartAmount=eMailMessageContentMultipart.getCount();
+            HashMap<String, Object> partContentTypeAndContent=new HashMap<>();
+            for (int i=0; i<eMailMessageContentPartAmount; i++) {
+                Part contentPart=eMailMessageContentMultipart.getBodyPart(i);
+                partContentTypeAndContent.putAll(loadEMailMessageContent(contentPart));
+            }
+            return partContentTypeAndContent;
+        } else if (eMailMessageContentPart.isMimeType(MESSAGE_RFC822)) {
+            HashMap<String, Object> partContentTypeAndContent=new HashMap<>();
+            Part nestedMessageContent = (Part) eMailMessageContentPart.getContent();
+            partContentTypeAndContent.putAll(loadEMailMessageContent(nestedMessageContent));
+            return partContentTypeAndContent;
+        }
+            HashMap<String, Object> partContentTypeAndContent = new HashMap<>();
+            partContentTypeAndContent.put(UNKNOWN_CONTENT_TYPE, null);
+            System.out.println(eMailMessageContentPart.getContentType());
+            return partContentTypeAndContent;
+    }
+
+    public static void disconnectFromNetwork() {
+        executor.execute((Runnable) () -> {
+            try {
+                EMailService.hasLogOut=true;
+                folder.close();
+                store.close();
+                transport.close();
+                EMailService.hasDisplayedMessages=false;
+                eMailMessagesDisplayed.clear();
+                eMailMessagesLoaded.clear();
+                if (mainMenuDeletingMode)
+                    mainMenuDeletingMode=false;
+                currentActivity.runOnUiThread((Runnable) () -> {
+                    Intent intent=new Intent(currentActivity, SignInMenu.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    currentActivity.startActivity(intent);
+                });
+            } catch (Exception e) {
+
+            }
+        });
+    }
+
+    public static void setCurrentEMailMessage(EMailMessage eMailMessage) {
+        currentEMailMessage = eMailMessage;
+    }
+
+    public static EMailMessage getCurrentEMailMessage() {
+        return currentEMailMessage;
+    }
+
+    public static String formatSentDate(Date date) {
+        SimpleDateFormat sendDateFormat = new SimpleDateFormat("MMM, dd hh:mm");
+        String sentDate = sendDateFormat.format(date);
+        return sentDate;
+    }
+
+    public static int getCurrentMainMenuScrollY() {
+        return currentMainMenuScrollY;
+    }
+
+    public static void setCurrentMainMenuScrollY(int mainMenuScrollY) {
+        currentMainMenuScrollY=mainMenuScrollY;
+    }
+
+    public void onAnimationStart(Animator animator) {
+
+    }
+
+    public void onAnimationRepeat(Animator animator) {
+
+    }
+
+    public void onAnimationEnd(Animator animator) {
+
+    }
+
+    public void onAnimationCancel(Animator animator) {
+
+    }
+
+    public void onAnimationUpdate(ValueAnimator animator) {
+
+    }
+
+
+    public void onAnimationStart(Animation animation) {
+
+    }
+
+    public void onAnimationRepeat(Animation animation) {
+
+    }
+
+    public void onAnimationEnd(Animation animation) {
+
+    }
+
+    public void onClick(View view) {
+
+    }
+
+    public boolean onLongClick(View view) {
+        return false;
+    }
+
+    public void onFocusChange(View view, boolean hasFocus) {
+
+    }
+}
+
+
+
+
+
