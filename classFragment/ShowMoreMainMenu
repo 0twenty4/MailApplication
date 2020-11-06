@@ -1,0 +1,84 @@
+package com.example.mailapplication;
+
+import android.graphics.drawable.Drawable;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
+import android.support.v7.app.AppCompatActivity;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.os.Bundle;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
+import android.widget.TextView;
+
+public class ShowMoreMainMenu extends Fragment {
+
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        return inflater.inflate(R.layout.main_menu_show_more, container, false);
+    }
+
+    public void onActivityCreated(Bundle savedInstanceState) {
+        super.onActivityCreated(savedInstanceState);
+        AppCompatActivity mainMenu = EMailService.getCurrentActivity();
+        TextView logOut = getView().findViewById(R.id.main_menu_show_more_log_out);
+        logOut.setOnClickListener(new EMailService() {
+            public void onClick(View view) {
+                Fragment disconnecting = new Disconnecting();
+                int fragmentLoadingLayoutId = EMailService.getCurrentActivityLayoutForFragmentLoadingId();
+                mainMenu.findViewById(fragmentLoadingLayoutId).bringToFront();
+                View mainMenuTop = mainMenu.findViewById(R.id.main_menu_top);
+                mainMenuTop.setElevation(0);
+                View mainMenuShowMoreLayout = mainMenu.findViewById(R.id.main_menu_show_more_layout);
+                mainMenuShowMoreLayout.setElevation(0);
+                FragmentManager mainMenuFragmentManager = mainMenu.getSupportFragmentManager();
+                mainMenuFragmentManager.beginTransaction()
+                        .setCustomAnimations(R.anim.slide_from_left_to_middle, 0)
+                        .add(fragmentLoadingLayoutId, disconnecting)
+                        .commit();
+                mainMenuFragmentManager.beginTransaction()
+                        .remove(ShowMoreMainMenu.this)
+                        .commit();
+                EMailService.disconnectFromNetwork();
+            }
+        });
+        TextView refresh = getView().findViewById(R.id.main_menu_show_more_refresh);
+        refresh.setOnClickListener(new EMailService() {
+            public void onClick(View view) {
+                refresh.setClickable(false);
+                int mainMenuEMailMessagesLayout = R.id.main_menu_email_messages_layout;
+                EMailService.refresh(mainMenuEMailMessagesLayout);
+            }
+        });
+    }
+
+    public Animation onCreateAnimation(int animation, boolean enter, int nextAnimation) {
+        final AppCompatActivity mainMenu = EMailService.getCurrentActivity();
+        final int animationId;
+        if (enter)
+            animationId = R.anim.slide_from_top_to_bottom;
+        else
+            animationId = R.anim.slide_from_bottom_to_top;
+        final Animation animationFragment = AnimationUtils.loadAnimation(mainMenu, animationId);
+        animationFragment.setAnimationListener(new EMailService() {
+            final FrameLayout mainMenuShowMoreLayout = mainMenu.findViewById(R.id.main_menu_show_more_layout);
+
+            public void onAnimationStart(Animation animation) {
+                if (!enter)
+                    mainMenuShowMoreLayout.setBackground(null);
+            }
+
+            public void onAnimationEnd(Animation animation) {
+                if (enter) {
+                    Drawable background = mainMenu.getDrawable(R.drawable.background_main_menu_show_more_layout);
+                    mainMenuShowMoreLayout.setBackground(background);
+                }
+                ImageView mainMenuShowMore = mainMenu.findViewById(R.id.main_menu_show_more);
+                mainMenuShowMore.setClickable(true);
+            }
+        });
+        return animationFragment;
+    }
+}
