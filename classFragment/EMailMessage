@@ -8,7 +8,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -23,6 +22,8 @@ public class EMailMessage extends Fragment {
     String subject;
     String sentDate;
     boolean ticked;
+    EMailService eMailMessageOnClickListener;
+    EMailService eMailMessageOnLongClickListener;
 
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         return inflater.inflate(R.layout.email_message, container, false);
@@ -30,7 +31,7 @@ public class EMailMessage extends Fragment {
 
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        boolean mainMenuDeletingModeOn=EMailService.getMainMenuDeletingMode();
+        boolean mainMenuDeletingModeOn=EMailService.getModeMainMenuDeleting();
         if (mainMenuDeletingModeOn) {
             ImageView eMailMessageDelete=getView().findViewById(R.id.email_message_delete);
             eMailMessageDelete.setVisibility(VISIBLE);
@@ -42,51 +43,54 @@ public class EMailMessage extends Fragment {
         eMailMessageFrom.setText(from[0]);
         eMailMessageSubject.setText(subject);
         eMailMessageSentDate.setText(sentDate);
-        View eMailMessageView=getView();
-        eMailMessageView.setOnClickListener(new EMailService() {
+        View eMailMessageView=getView();;
+        eMailMessageOnClickListener=new EMailService() {
             public void onClick(View view) {
-                boolean mainMenuDeletingModeOn=EMailService.getMainMenuDeletingMode();
-                if (mainMenuDeletingModeOn) {
+                boolean mainMenuDeletingModeOn=EMailService.getModeMainMenuDeleting();
+                if (!mainMenuDeletingModeOn) {
+                    EMailService.setEMailMessageCurrent(EMailMessage.this);
+                    AppCompatActivity mainMenu = EMailService.getCurrentActivity();
+                    Intent intent = new Intent(mainMenu, EMailMessageOpen.class);
+                    ScrollView mainMenuScroll = mainMenu.findViewById(R.id.main_menu_scroll);
+                    int currentMainMenuScrollY = mainMenuScroll.getScrollY();
+                    EMailService.setCurrentMainMenuScrollY(currentMainMenuScrollY);
+                    mainMenu.startActivity(intent);
+                } else {
                     ValueAnimator eMailMessageViewAnimator;
                     ImageView eMailMessageTick = getView().findViewById(R.id.email_message_tick);
                     int grey = mainMenu.getColor(R.color.bright_grey);
-                    int white=mainMenu.getColor(R.color.white);
+                    int white = mainMenu.getColor(R.color.white);
                     if (!ticked) {
                         ticked = true;
+                        addEMailMessagesDisplayedTicked(EMailMessage.this);
                         eMailMessageTick.setVisibility(VISIBLE);
                         eMailMessageViewAnimator = ValueAnimator.ofArgb(white, grey);
                     } else {
-                        ticked=false;
+                        ticked = false;
+                        removeEMailMessagesDisplayedTicked(EMailMessage.this);
                         eMailMessageTick.setVisibility(GONE);
-                        eMailMessageViewAnimator=ValueAnimator.ofArgb(grey, white);
+                        eMailMessageViewAnimator = ValueAnimator.ofArgb(grey, white);
                     }
-                    eMailMessageViewAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+                    eMailMessageViewAnimator.addUpdateListener(new EMailService() {
                         public void onAnimationUpdate(ValueAnimator animator) {
                             eMailMessageView.setBackgroundColor((int) animator.getAnimatedValue());
                         }
                     });
                     eMailMessageViewAnimator.setDuration(300);
                     eMailMessageViewAnimator.start();
-
-                } else {
-                    EMailService.setCurrentEMailMessage(EMailMessage.this);
-                    AppCompatActivity mainMenu =EMailService.getCurrentActivity();
-                    Intent intent = new Intent(mainMenu, EMailMessageOpen.class);
-                    ScrollView mainMenuScroll = mainMenu.findViewById(R.id.main_menu_scroll);
-                    int currentMainMenuScrollY = mainMenuScroll.getScrollY();
-                    EMailService.setCurrentMainMenuScrollY(currentMainMenuScrollY);
-                    mainMenu.startActivity(intent);
                 }
             }
-        });
-        eMailMessageView.setOnLongClickListener(new EMailService() {
+        };
+        eMailMessageView.setOnClickListener(eMailMessageOnClickListener);
+        eMailMessageOnLongClickListener=new EMailService() {
             public boolean onLongClick(View view) {
-                boolean mainMenuDeletingModeOn = EMailService.getMainMenuDeletingMode();
+                boolean mainMenuDeletingModeOn = EMailService.getModeMainMenuDeleting();
                 if (!mainMenuDeletingModeOn) {
                     ticked=true;
+                    addEMailMessagesDisplayedTicked(EMailMessage.this);
                     ImageView eMailMessageTick=getView().findViewById(R.id.email_message_tick);
                     eMailMessageTick.setVisibility(VISIBLE);
-                    EMailService.setMainMenuDeletingMode(true);
+                    EMailService.setModeMainMenuDeleting(true);
                     int grey = EMailService.getCurrentActivity().getColor(R.color.bright_grey);
                     ValueAnimator eMailMessageViewAnimator = ValueAnimator.ofArgb(grey);
                     eMailMessageViewAnimator.addUpdateListener(new EMailService() {
@@ -100,19 +104,28 @@ public class EMailMessage extends Fragment {
                     onClick(eMailMessageView);
                 return true;
             }
-        });
+        };
+        eMailMessageView.setOnLongClickListener(eMailMessageOnLongClickListener);
         ImageView eMailMessageDelete=getView().findViewById(R.id.email_message_delete);
         eMailMessageDelete.setOnClickListener(new EMailService() {
             public void onClick(View view) {
-                int mainMenuConfirmingDeletingLayoutId=R.id.main_menu_confirming_deleting_layout;
-                Fragment confirmingDeleting=new ConfirmingDeleting();
-                FrameLayout mainMenuConfirmingDeletingLayout=mainMenu.findViewById(mainMenuConfirmingDeletingLayoutId);
-                mainMenuConfirmingDeletingLayout.bringToFront();
-                mainMenu.getSupportFragmentManager().beginTransaction()
-                        .add(mainMenuConfirmingDeletingLayoutId, confirmingDeleting)
-                        .commit();
+                boolean modeMainMenuConfirmingDeletingOn=EMailService.getModeMainMenuConfirmingDeleting();
+                if (!modeMainMenuConfirmingDeletingOn) {
+                    setModeMainMenuConfirmingDeletingOn(EMailMessage.this);
+                }
             }
         });
+    }
+
+    public void setClickable(boolean clickable) {
+        View eMailMessageView=getView();
+        if (clickable) {
+            eMailMessageView.setOnClickListener(eMailMessageOnClickListener);
+            eMailMessageView.setOnLongClickListener(eMailMessageOnLongClickListener);
+        } else {
+            eMailMessageView.setOnClickListener(null);
+            eMailMessageView.setOnLongClickListener(null);
+        }
     }
 
     public void setData(Message message, String[] from, String subject, String sentDate) {
@@ -122,3 +135,4 @@ public class EMailMessage extends Fragment {
         this.sentDate=sentDate;
     }
 }
+
