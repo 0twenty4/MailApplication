@@ -5,10 +5,12 @@
     <color name="teal_200">#FF03DAC5</color>
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
+    <color name="white">#FFFFFF</color>
     <color name="main_color">#FF0028FF</color>
     <color name="green">#FF00FF00</color>
     <color name="red">#FF0000</color>
     <color name="grey">#696969</color>
     <color name="bright_grey">#D3D3D3</color>
+    <color name="shadow">#66000000</color>
+    <color name="transparent">#00000000</color>
 </resources>
