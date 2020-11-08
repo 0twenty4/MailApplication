@@ -30,4 +30,6 @@
     <string name="you_sure_delete_messages">Are you sure you want to delete these messages?</string>
     <string name="yes">Yes</string>
     <string name="no">No</string>
+    <string name="to">To</string>
+    <string name="compose_message">Compose message</string>
 </resources>
