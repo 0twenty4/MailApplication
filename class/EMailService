@@ -88,7 +88,6 @@ public abstract class EMailService implements Animation.AnimationListener, Value
     private static boolean eMailMessageCurrentHasContentHtml;
     private static final ExecutorService executor=Executors.newSingleThreadExecutor();
     private static EMailMessage eMailMessageCurrent;
-    private static EMailMessage eMailMessageToDelete;
     private static boolean hasDisplayedMessages;
     private static boolean hasLogOut;
     private static boolean modeMainMenuDeleting;
@@ -176,15 +175,15 @@ public abstract class EMailService implements Animation.AnimationListener, Value
         return modeMainMenuDeleting;
     }
 
-    public static void setModeMainMenuConfirmingDeletingOn(EMailMessage eMailMessageToDeleteCertain) {
-        if (eMailMessageToDeleteCertain!=null) {
-            setConfirmingDeleting(true, eMailMessageToDeleteCertain);
+    public static void setModeMainMenuConfirmingDeletingOn(EMailMessage onlyOneMessageToDelete) {
+        if (onlyOneMessageToDelete!=null) {
+            setConfirmingDeleting(true, onlyOneMessageToDelete);
         } else {
             int eMailMessagesDisplayedTickedAmount = eMailMessagesDisplayedTicked.size();
             if (eMailMessagesDisplayedTickedAmount > 1)
                 setConfirmingDeleting(true, null);
             else {
-                EMailMessage onlyOneEMailMessageToDelete = eMailMessagesDisplayed.get(0);
+                EMailMessage onlyOneEMailMessageToDelete = eMailMessagesDisplayedTicked.get(0);
                 setConfirmingDeleting(true, onlyOneEMailMessageToDelete);
             }
         }
@@ -205,11 +204,14 @@ public abstract class EMailService implements Animation.AnimationListener, Value
         if (isOn) {
             if (onlyOneEMailMessageToDelete==null) {
                 if (eMailMessagesDisplayedTickedAmount>1)
-                    mainMenuConfirmingDeleting.setOneMessage(false);
-                else
-                    mainMenuConfirmingDeleting.setOneMessage(true);
-            } else
-                mainMenuConfirmingDeleting.setOneMessage(true);
+                    mainMenuConfirmingDeleting.setOnlyOneEMailMessageToDelete(null);
+                else {
+                    EMailMessage eMailMessageToDelete=eMailMessagesDisplayedTicked.get(0);
+                    mainMenuConfirmingDeleting.setOnlyOneEMailMessageToDelete(eMailMessageToDelete);
+                }
+            } else {
+                mainMenuConfirmingDeleting.setOnlyOneEMailMessageToDelete(onlyOneEMailMessageToDelete);
+            }
             viewsClickable = false;
             int mainMenuConfirmingDeletingLayoutId = R.id.main_menu_confirming_deleting_layout;
             currentActivityFragmentTransaction
@@ -300,17 +302,17 @@ public abstract class EMailService implements Animation.AnimationListener, Value
 
     }
 
-    public static void deleteMessage(EMailMessage eMailMessageToDelete) {
-        delete(eMailMessageToDelete);
+    public static void deleteMessage(EMailMessage onlyOneEMailMessageToDelete) {
+        delete(onlyOneEMailMessageToDelete, null);
     }
 
     public static void deleteMessages() {
-        delete(null);
+        ArrayList<EMailMessage> eMailMessagesToDelete=new ArrayList<>(eMailMessagesDisplayedTicked);
+        delete(null, eMailMessagesToDelete);
     }
 
-    public static void delete(EMailMessage eMailMessageToDelete) {
+    public static void delete(EMailMessage onlyOneEMailMessageToDelete, ArrayList<EMailMessage> eMailMessagesToDelete) {
         setModeMainMenuConfirmingDeletingOff();
-        ArrayList<EMailMessage> eMailMessagesToDelete=new ArrayList<>(eMailMessagesDisplayedTicked);
         setModeMainMenuDeleting(false);
         fragmentLoadingCurrent = new LoadingProgressBarCircle();
         currentActivityFragmentManager.beginTransaction()
@@ -320,10 +322,10 @@ public abstract class EMailService implements Animation.AnimationListener, Value
         removeEMailMessagesDisplayedToEMailMessagesLoaded();
         executor.execute((Runnable) () -> {
             try {
-                if (eMailMessageToDelete!=null) {
-                    Message message = eMailMessageToDelete.message;
+                if (onlyOneEMailMessageToDelete!=null) {
+                    Message message = onlyOneEMailMessageToDelete.message;
                     message.setFlag(Flags.Flag.DELETED, true);
-                    eMailMessagesLoadedCurrent.remove(eMailMessageToDelete);
+                    eMailMessagesLoadedCurrent.remove(onlyOneEMailMessageToDelete);
                     eMailMessagesLoadedAllAmount--;
                 } else {
                     for (EMailMessage eMailMessage : eMailMessagesToDelete) {
@@ -343,7 +345,6 @@ public abstract class EMailService implements Animation.AnimationListener, Value
                 System.out.println(messageCount);
                 System.out.println(eMailMessagesLoadedCurrent.size());
             } catch (Exception e) {
-                System.out.println(e.getClass().getName());
             }
             currentActivity.runOnUiThread((Runnable) () -> {
                 int eMailMessagesLayout = R.id.main_menu_email_messages_layout;
@@ -363,7 +364,6 @@ public abstract class EMailService implements Animation.AnimationListener, Value
                 currentActivityFragmentManager.beginTransaction()
                         .remove(fragmentLoadingCurrent)
                         .commit();
-                System.out.println(eMailMessagesLoadedCurrent.size());
             });
         });
     }
@@ -958,6 +958,11 @@ public abstract class EMailService implements Animation.AnimationListener, Value
 
     }
 }
+
+
+
+
+
 
 
 
