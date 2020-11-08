@@ -8,54 +8,79 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.LayoutInflater;
 import android.os.Bundle;
-import android.view.ViewPropertyAnimator;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.view.animation.LinearInterpolator;
-import android.widget.FrameLayout;
+import android.widget.TextView;
 
-public class ConfirmingDeleting extends Fragment {
+public class ConfirmingDeletingMainMenu extends Fragment {
+    EMailMessage onlyOneEMailMessageToDelete;
 
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         return inflater.inflate(R.layout.confirming_deleting, container, false);
     }
 
-    public Animation onCreateAnimation(int animation, boolean enter, int animationNext) {
-        final AppCompatActivity mainMenu=EMailService.getCurrentActivity();
-        final int animationId=R.anim.plug;
-        System.out.println("hello");
-        final Animation animationConfirmingDeletingFragment=AnimationUtils.loadAnimation(mainMenu, animationId);
-        animationConfirmingDeletingFragment.setAnimationListener(new EMailService() {
-            public void onAnimationEnd(Animation animation) {
-                System.out.println("im here");
-                final float fromAlpha;
-                final float toAlpha;
-                final FrameLayout mainMenuConfirmingDeletingLayout=mainMenu.findViewById(R.id.main_menu_confirming_deleting_layout);
-                final View confirmingDeletingView=getView();
-                ViewPropertyAnimator confirmingDeletingViewAnimator=confirmingDeletingView.animate()
-                        .setDuration(1000)
-                        .setInterpolator(new LinearInterpolator());
-                if (enter) {
-                    fromAlpha=0.0f;
-                    toAlpha = 1.0f;
-                    confirmingDeletingViewAnimator.setListener(new EMailService() {
-                        public void onAnimationEnd(Animator animator){
-                            Drawable background=mainMenu.getDrawable(R.drawable.background_main_menu_confirming_deleting_layout);
-                            mainMenuConfirmingDeletingLayout.setBackground(background);
-                        }
-                    });
-                }
-                else {
-                    mainMenuConfirmingDeletingLayout.setBackground(null);
-                    fromAlpha=1.0f;
-                    toAlpha = 0.0f;
-                }
-                confirmingDeletingView.setAlpha(fromAlpha);
-                confirmingDeletingViewAnimator
-                        .alpha(toAlpha)
-                        .start();
+    public void onActivityCreated(Bundle savedInstanceState) {
+        super.onActivityCreated(savedInstanceState);
+        final AppCompatActivity mainMenu = EMailService.getCurrentActivity();
+        boolean hasOnlyOneEMailMessageToDelete=onlyOneEMailMessageToDelete!=null;
+        if (!hasOnlyOneEMailMessageToDelete) {
+            TextView mainMenuConfirmingDeletingYouSure=getView().findViewById(R.id.confirming_deleting_you_sure);
+            String youSureDeleteMessages=mainMenu.getString(R.string.you_sure_delete_messages);
+            mainMenuConfirmingDeletingYouSure.setText(youSureDeleteMessages);
+        }
+        View yes = getView().findViewById(R.id.confirming_deleting_yes);
+        yes.setOnClickListener(new EMailService() {
+            public void onClick(View view) {
+                if (hasOnlyOneEMailMessageToDelete)
+                    deleteMessage(onlyOneEMailMessageToDelete);
+                else
+                    deleteMessages();
             }
         });
-        return animationConfirmingDeletingFragment;
+        View no = getView().findViewById(R.id.confirming_deleting_no);
+        no.setOnClickListener(new EMailService() {
+            public void onClick(View view) {
+                setModeMainMenuConfirmingDeletingOff();
+            }
+        });
+    }
+
+
+    public void setOnlyOneEMailMessageToDelete(EMailMessage onlyOneEMailMessageToDelete) {
+        this.onlyOneEMailMessageToDelete=onlyOneEMailMessageToDelete;
+    }
+
+
+
+    public Animation onCreateAnimation(int animation, boolean enter, int animationNext) {
+        final AppCompatActivity mainMenu = EMailService.getCurrentActivity();
+        final int animationId;
+        final float alphaTo;
+        final View mainMenuConformingDeletingLayout = mainMenu.findViewById(R.id.main_menu_confirming_deleting_layout);
+        if (enter) {
+            animationId = R.anim.fade_from_invisible_to_visible;
+            alphaTo = 1;
+        } else {
+            mainMenuConformingDeletingLayout.setBackground(null);
+            animationId = R.anim.fade_from_visible_to_invisible;
+            alphaTo = 0;
+        }
+        final Animation mainMenuConfirmingDeletingAnimator = AnimationUtils.loadAnimation(mainMenu, animationId);
+        View mainMenuShadow = mainMenu.findViewById(R.id.main_menu_shadow);
+        mainMenuShadow.animate()
+                .alpha(alphaTo)
+                .setDuration(150)
+                .setInterpolator(new LinearInterpolator())
+                .setListener(new EMailService() {
+                    public void onAnimationEnd(Animator animator) {
+                        if (enter) {
+                            Drawable backgroundMainMenuConfirmingDeletingLayout = mainMenu.getDrawable(R.drawable.background_main_menu_confirming_deleting_layout);
+                            mainMenuConformingDeletingLayout.setBackground(backgroundMainMenuConfirmingDeletingLayout);
+                        }
+                    }
+                })
+                .start();
+        return mainMenuConfirmingDeletingAnimator;
     }
 }
