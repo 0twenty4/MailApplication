@@ -26,5 +26,8 @@
         <activity
             android:name=".EMailMessageOpen">
         </activity>
+        <activity
+            android:name=".EMailMessageComposing">
+        </activity>
     </application>
 </manifest>
