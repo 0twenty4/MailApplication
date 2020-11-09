@@ -28,6 +28,7 @@
             app:srcCompat="@drawable/back" />
 
         <ImageView
+            android:id="@+id/email_message_composing_send"
             android:layout_width="35dp"
             android:layout_height="35dp"
             android:layout_marginEnd="20dp"
@@ -128,7 +129,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/email_message_composing_divider_dash_between_subject_compose_message">
         <EditText
-            android:id="@+id/email_message_composing_compose_message"
+            android:id="@+id/email_message_composing_content"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:inputType="textMultiLine"
@@ -138,7 +139,7 @@
             app:layout_constraintTop_toTopOf="parent"/>
     </ScrollView>
 
-        <FrameLayout
+        <ImageView
             android:id="@+id/email_message_composing_email_address_from_correct_layout"
             android:layout_width="30dp"
             android:layout_height="30dp"
@@ -146,7 +147,7 @@
             android:layout_marginEnd="25dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintBottom_toTopOf="@id/email_message_composing_divider_dash_between_from_to"/>
-        <FrameLayout
+        <ImageView
             android:layout_width="30dp"
             android:layout_height="30dp"
             android:layout_marginBottom="18dp"
