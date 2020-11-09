@@ -1,22 +1,30 @@
 package com.example.mailapplication;
 
+import android.animation.Animator;
 import android.content.Intent;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.EditText;
-import android.widget.FrameLayout;
 import android.widget.ImageView;
 
 public class EMailMessageComposing extends AppCompatActivity {
+    boolean eMailMessageComposingEMailAddressFromCorrect;
+    boolean eMailMessageComposingEMailAddressFromChecked;
+    boolean eMailMessageComposingEMailAddressToCorrect;
+    boolean eMailMessageComposingEMailAddressToChecked;
 
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.email_message_composing);
+        final ImageView eMailMessageComposingEMailAddressFromCorrectLayout = findViewById(R.id.email_message_composing_email_address_from_correct_layout);
+        final ImageView eMailMessageComposingEMailAddressToCorrectLayout = findViewById(R.id.email_message_composing_email_address_to_correct_layout);
+        final int eMailMessageComposingEMailAddressCorrectImage=R.drawable.email_address_correct;
+        final int eMailMessageComposingEMailAddressNotCorrectImage=R.drawable.email_address_not_correct;
         ImageView eMailMessageComposingBack = findViewById(R.id.email_message_composing_back);
         eMailMessageComposingBack.setOnClickListener(new EMailService() {
             public void onClick(View view) {
-                Intent intent = new Intent(EMailMessageComposing.this, MainMenu.class);
+                Intent intent = new Intent(EMailMessageComposing.this, MenuMain.class);
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
                 startActivity(intent);
@@ -24,14 +32,12 @@ public class EMailMessageComposing extends AppCompatActivity {
         });
         EditText eMailMessageComposingFrom = findViewById(R.id.email_message_composing_from);
         eMailMessageComposingFrom.setOnFocusChangeListener(new EMailService() {
-            final FrameLayout eMailMessageComposingEMailAddressFromCorrectLayout = findViewById(R.id.email_message_composing_email_address_from_correct_layout);
             final String eMailMessageComposingFromTextOrigin = getString(R.string.from);
 
             public void onFocusChange(View view, boolean hasFocus) {
                 if (hasFocus) {
-                    boolean eMailMessageComposingEMailAddressFromChecked = eMailMessageComposingEMailAddressFromCorrectLayout.getChildCount() > 0;
                     if (eMailMessageComposingEMailAddressFromChecked)
-                        eMailMessageComposingEMailAddressFromCorrectLayout.removeAllViews();
+                        eMailMessageComposingEMailAddressFromCorrectLayout.setImageResource(0);
                     else {
                         String eMailMessageComposingFromTextCurrent = eMailMessageComposingFrom.getText().toString();
                         if (eMailMessageComposingFromTextCurrent.equals(eMailMessageComposingFromTextOrigin))
@@ -40,15 +46,17 @@ public class EMailMessageComposing extends AppCompatActivity {
                 } else {
                     if (!EMailService.fieldEmpty(eMailMessageComposingFrom)) {
                         if (EMailService.eMailAddressCorrect(eMailMessageComposingFrom)) {
-                            ImageView eMailAddressCorrect = new ImageView(EMailMessageComposing.this);
-                            eMailAddressCorrect.setImageResource(R.drawable.email_address_correct);
-                            eMailMessageComposingEMailAddressFromCorrectLayout.addView(eMailAddressCorrect);
+                            eMailMessageComposingEMailAddressFromChecked = true;
+                            eMailMessageComposingEMailAddressFromCorrect = true;
+                            eMailMessageComposingEMailAddressFromCorrectLayout.setImageResource(eMailMessageComposingEMailAddressCorrectImage);
                         } else {
-                            ImageView eMailAddressNotCorrect = new ImageView(EMailMessageComposing.this);
-                            eMailAddressNotCorrect.setImageResource(R.drawable.email_address_not_correct);
-                            eMailMessageComposingEMailAddressFromCorrectLayout.addView(eMailAddressNotCorrect);
+                            eMailMessageComposingEMailAddressFromChecked = true;
+                            eMailMessageComposingEMailAddressFromCorrect = false;
+                            eMailMessageComposingEMailAddressFromCorrectLayout.setImageResource(eMailMessageComposingEMailAddressNotCorrectImage);
                         }
                     } else {
+                        eMailMessageComposingEMailAddressFromChecked = false;
+                        eMailMessageComposingEMailAddressFromCorrect = false;
                         eMailMessageComposingFrom.setText(eMailMessageComposingFromTextOrigin);
                     }
                 }
@@ -56,14 +64,13 @@ public class EMailMessageComposing extends AppCompatActivity {
         });
         EditText eMailMessageComposingTo = findViewById(R.id.email_message_composing_to);
         eMailMessageComposingTo.setOnFocusChangeListener(new EMailService() {
-            final FrameLayout eMailMessageComposingEMailAddressToCorrectLayout = findViewById(R.id.email_message_composing_email_address_to_correct_layout);
+            final ImageView eMailMessageComposingEMailAddressToCorrectLayout = findViewById(R.id.email_message_composing_email_address_to_correct_layout);
             final String eMailMessageComposingToTextOrigin = getString(R.string.to);
 
             public void onFocusChange(View view, boolean hasFocus) {
                 if (hasFocus) {
-                    boolean eMailMessageComposingEMailAddressToChecked = eMailMessageComposingEMailAddressToCorrectLayout.getChildCount() > 0;
                     if (eMailMessageComposingEMailAddressToChecked)
-                        eMailMessageComposingEMailAddressToCorrectLayout.removeAllViews();
+                        eMailMessageComposingEMailAddressToCorrectLayout.setImageResource(0);
                     else {
                         String eMailMessageComposingToTextCurrent = eMailMessageComposingTo.getText().toString();
                         if (eMailMessageComposingToTextCurrent.equals(eMailMessageComposingToTextOrigin)) {
@@ -73,16 +80,19 @@ public class EMailMessageComposing extends AppCompatActivity {
                 } else {
                     if (!EMailService.fieldEmpty(eMailMessageComposingTo)) {
                         if (EMailService.eMailAddressCorrect(eMailMessageComposingTo)) {
-                            ImageView eMailAddressCorrect = new ImageView(EMailMessageComposing.this);
-                            eMailAddressCorrect.setImageResource(R.drawable.email_address_correct);
-                            eMailMessageComposingEMailAddressToCorrectLayout.addView(eMailAddressCorrect);
+                            eMailMessageComposingEMailAddressToCorrect = true;
+                            eMailMessageComposingEMailAddressToCorrect = true;
+                            eMailMessageComposingEMailAddressToCorrectLayout.setImageResource(eMailMessageComposingEMailAddressCorrectImage);
                         } else {
-                            ImageView eMailAddressNotCorrect = new ImageView(EMailMessageComposing.this);
-                            eMailAddressNotCorrect.setImageResource(R.drawable.email_address_not_correct);
-                            eMailMessageComposingEMailAddressToCorrectLayout.addView(eMailAddressNotCorrect);
+                            eMailMessageComposingEMailAddressToChecked = true;
+                            eMailMessageComposingEMailAddressToCorrect = false;
+                            eMailMessageComposingEMailAddressToCorrectLayout.setImageResource(eMailMessageComposingEMailAddressNotCorrectImage);
                         }
-                    } else
+                    } else {
+                        eMailMessageComposingEMailAddressToChecked = false;
+                        eMailMessageComposingEMailAddressToCorrect = false;
                         eMailMessageComposingTo.setText(eMailMessageComposingToTextOrigin);
+                    }
                 }
             }
         });
@@ -105,14 +115,66 @@ public class EMailMessageComposing extends AppCompatActivity {
                 }
             }
         };
-        EditText eMailMessageComposingSubject=findViewById(R.id.email_message_composing_subject);
+        EditText eMailMessageComposingSubject = findViewById(R.id.email_message_composing_subject);
         eMailMessageComposingSubject.setOnFocusChangeListener(eMailMessageComposingSubjectAndComposeMessageFocusChangeListener);
-        EditText eMailMessageComposingComposeMessage=findViewById(R.id.email_message_composing_compose_message);
-        eMailMessageComposingComposeMessage.setOnFocusChangeListener(eMailMessageComposingSubjectAndComposeMessageFocusChangeListener);
+        EditText eMailMessageComposingContent = findViewById(R.id.email_message_composing_content);
+        eMailMessageComposingContent.setOnFocusChangeListener(eMailMessageComposingSubjectAndComposeMessageFocusChangeListener);
+        ImageView eMailMessageComposingSend = findViewById(R.id.email_message_composing_send);
+        eMailMessageComposingSend.setOnClickListener(new EMailService() {
+            public void onClick(View view) {
+                eMailMessageComposingSend.setClickable(false);
+                if (!eMailMessageComposingEMailAddressFromChecked) {
+                    eMailMessageComposingEMailAddressFromChecked=true;
+                    if (!eMailMessageComposingEMailAddressToChecked) {
+                        eMailMessageComposingEMailAddressToChecked=true;
+                        eMailMessageComposingEMailAddressToCorrectLayout.setImageResource(eMailMessageComposingEMailAddressNotCorrectImage);
+                    }
+                    eMailMessageComposingEMailAddressFromCorrectLayout.setImageResource(eMailMessageComposingEMailAddressNotCorrectImage);
+                    eMailMessageComposingSend.setClickable(true);
+                } else {
+                    if (!eMailMessageComposingEMailAddressFromCorrect) {
+                        if (!eMailMessageComposingEMailAddressToCorrect) {
+                            animateTranslationX(eMailMessageComposingEMailAddressToCorrectLayout, -5, 100, 6);
+                        }
+                        animateTranslationX(eMailMessageComposingEMailAddressFromCorrectLayout, -5, 100, 6);
+                    } else
+                        sendEMailMessage(eMailMessageComposingFrom, eMailMessageComposingTo, eMailMessageComposingSubject, eMailMessageComposingContent);
+                }
+            }
+        });
+    }
+
+    public void animateTranslationX(ImageView view, float translationX, int duration, int times) {
+        times--;
+        final int timesToAnimate=times;
+        if (timesToAnimate==0) {
+            view.animate()
+                    .translationX(0)
+                    .setDuration(duration)
+                    .setListener(new EMailService() {
+                        public void onAnimationEnd(Animator animator) {
+                            view.clearAnimation();
+                            ImageView eMailMessageComposingSend=findViewById(R.id.email_message_composing_send);
+                            eMailMessageComposingSend.setClickable(true);
+                        }
+                    })
+                    .start();
+        } else {
+            view.animate()
+                    .translationX(translationX)
+                    .setDuration(duration)
+                    .setListener(new EMailService() {
+                        public void onAnimationEnd(Animator animator) {
+                            float translationXNext=-translationX;
+                            animateTranslationX(view, translationXNext, duration, timesToAnimate);
+                        }
+                    })
+                    .start();
+        }
     }
 
     public void onBackPressed() {
-        Intent intent=new Intent(this, MainMenu.class);
+        Intent intent=new Intent(this, MenuMain.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
