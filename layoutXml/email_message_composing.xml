@@ -1,16 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+
 <android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/email_message_composing"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
     <android.support.constraint.ConstraintLayout
-        android:id="@+id/email_message_open_top"
+        android:id="@+id/email_message_composing_top"
         android:layout_width="match_parent"
         android:layout_height="70dp"
         android:background="@drawable/background"
         android:elevation="2dp"
-        android:stateListAnimator="@null"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
@@ -40,28 +42,21 @@
 
     </android.support.constraint.ConstraintLayout>
 
-    <android.support.constraint.ConstraintLayout
-        android:layout_width="match_parent"
-        android:layout_height="661dp"
-        android:id="@+id/email_message_composing_layout"
-        android:layout_marginTop="70dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
 
-        <EditText
-            android:id="@+id/email_message_composing_from"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="15dp"
-            android:layout_marginStart="15dp"
-            android:layout_marginTop="20dp"
-            android:backgroundTint="@color/transparent"
-            android:ems="10"
-            android:inputType="textPersonName"
-            android:text="@string/from"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+    <EditText
+        android:id="@+id/email_message_composing_from"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="15dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginEnd="15dp"
+        android:backgroundTint="@color/transparent"
+        android:inputType="textPersonName"
+        android:text="@string/from"
+
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/email_message_composing_top" />
 
     <View
         android:id="@+id/email_message_composing_divider_dash_between_from_to"
@@ -97,21 +92,21 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/email_message_composing_to" />
 
-        <EditText
-            android:id="@+id/email_message_composing_subject"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="15dp"
-            android:layout_marginEnd="15dp"
-            android:layout_marginTop="15dp"
-            android:backgroundTint="@color/transparent"
-            android:text="@string/subject"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/email_message_composing_divider_dash_between_to_subject" />
+    <EditText
+        android:id="@+id/email_message_composing_subject"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="15dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginEnd="15dp"
+        android:backgroundTint="@color/transparent"
+        android:text="@string/subject"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/email_message_composing_divider_dash_between_to_subject" />
 
     <View
-        android:id="@+id/email_message_composing_divider_dash_between_subject_compose_message"
+        android:id="@+id/email_message_composing_divider_dash_between_subject_content_scroll"
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:layout_marginTop="10dp"
@@ -121,42 +116,44 @@
         app:layout_constraintTop_toBottomOf="@id/email_message_composing_subject" />
 
     <ScrollView
+        android:id="@+id/email_message_composing_content_scroll"
         android:layout_width="match_parent"
-        android:layout_height="448dp"
+        android:layout_height="453dp"
         android:layout_marginStart="10dp"
         android:layout_marginEnd="10dp"
+        android:layout_marginTop="10dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/email_message_composing_divider_dash_between_subject_compose_message">
+        app:layout_constraintTop_toBottomOf="@id/email_message_composing_divider_dash_between_subject_content_scroll">
+
         <EditText
             android:id="@+id/email_message_composing_content"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:backgroundTint="@color/transparent"
             android:inputType="textMultiLine"
             android:text="@string/compose_message"
-            android:backgroundTint="@color/transparent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"/>
+            app:layout_constraintTop_toTopOf="parent" />
+
     </ScrollView>
 
-        <ImageView
-            android:id="@+id/email_message_composing_email_address_from_correct_layout"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
-            android:layout_marginBottom="18dp"
-            android:layout_marginEnd="25dp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintBottom_toTopOf="@id/email_message_composing_divider_dash_between_from_to"/>
-        <ImageView
-            android:layout_width="30dp"
-            android:layout_height="30dp"
-            android:layout_marginBottom="18dp"
-            android:layout_marginEnd="25dp"
-            android:id="@+id/email_message_composing_email_address_to_correct_layout"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintBottom_toTopOf="@id/email_message_composing_divider_dash_between_to_subject"/>
+    <ImageView
+        android:id="@+id/email_message_composing_email_address_from_correct_layout"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:layout_marginEnd="25dp"
+        android:layout_marginBottom="18dp"
+        app:layout_constraintBottom_toTopOf="@id/email_message_composing_divider_dash_between_from_to"
+        app:layout_constraintEnd_toEndOf="parent" />
 
-    </android.support.constraint.ConstraintLayout>
-
+    <ImageView
+        android:id="@+id/email_message_composing_email_address_to_correct_layout"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:layout_marginEnd="25dp"
+        android:layout_marginBottom="18dp"
+        app:layout_constraintBottom_toTopOf="@id/email_message_composing_divider_dash_between_to_subject"
+        app:layout_constraintEnd_toEndOf="parent" />
 
 </android.support.constraint.ConstraintLayout>
