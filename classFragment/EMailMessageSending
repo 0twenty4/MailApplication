@@ -1,32 +1,15 @@
-<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent">
+package com.example.mailapplication;
 
-    <ImageView
-        android:id="@+id/email_message_sending_email_logo"
-        android:layout_width="326dp"
-        android:layout_height="481dp"
-        android:tint="@color/main_color"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:srcCompat="@drawable/email_logo" />
+import android.support.v4.app.Fragment;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.LayoutInflater;
+import android.os.Bundle;
 
-    <TextView
-        android:id="@+id/email_message_sending_text"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="200dp"
-        android:text="@string/sending_message"
-        android:textSize="20sp"
-        android:textColor="@color/main_color"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"/>
+public class EMailMessageSending extends Fragment {
 
-</android.support.constraint.ConstraintLayout>
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        return inflater.inflate(R.layout.email_message_sending, container, false);
+    }
+
+}
