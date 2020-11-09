@@ -42,55 +42,87 @@
 
     </android.support.constraint.ConstraintLayout>
 
-
-    <EditText
-        android:id="@+id/email_message_composing_from"
-        android:layout_width="match_parent"
+    <HorizontalScrollView
+        android:id="@+id/email_message_composing_from_scroll"
+        android:layout_width="326dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="15dp"
         android:layout_marginTop="10dp"
-        android:layout_marginEnd="15dp"
-        android:backgroundTint="@color/transparent"
-        android:inputType="textPersonName"
-        android:text="@string/from"
-
-        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/email_message_composing_top" />
+        app:layout_constraintTop_toBottomOf="@id/email_message_composing_top">
+
+        <LinearLayout
+            android:id="@+id/email_message_composing_from_layout"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:focusable="true">
+
+            <EditText
+                android:id="@+id/email_message_composing_from_layout_part_origin"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:backgroundTint="@color/transparent"
+                android:focusable="true"
+                android:inputType="textPersonName"
+                android:text="@string/from"
+                android:textSize="20sp" />
+
+        </LinearLayout>
+
+    </HorizontalScrollView>
 
     <View
-        android:id="@+id/email_message_composing_divider_dash_between_from_to"
+        android:id="@+id/email_message_composing_divider_dash_between_from_scroll_to_scroll"
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:layout_marginTop="10dp"
         android:background="@color/bright_grey"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/email_message_composing_from" />
+        app:layout_constraintTop_toBottomOf="@id/email_message_composing_from_scroll" />
 
-    <EditText
-        android:id="@+id/email_message_composing_to"
-        android:layout_width="match_parent"
+    <HorizontalScrollView
+        android:id="@+id/email_message_composing_to_scroll"
+        android:layout_width="326dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="15dp"
         android:layout_marginTop="10dp"
         android:layout_marginEnd="15dp"
-        android:backgroundTint="@color/transparent"
-        android:ems="10"
-        android:inputType="textPersonName"
-        android:text="@string/to"
-        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/email_message_composing_divider_dash_between_from_to" />
+        app:layout_constraintTop_toBottomOf="@id/email_message_composing_divider_dash_between_from_scroll_to_scroll">
+
+        <LinearLayout
+            android:id="@+id/email_message_composing_to_layout"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:background="?android:attr/selectableItemBackground"
+            android:clickable="true"
+            android:contextClickable="true">
+
+            <EditText
+                android:id="@+id/email_message_composing_to_layout_part_origin"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="326"
+                android:backgroundTint="@color/transparent"
+                android:clickable="true"
+                android:focusable="true"
+                android:inputType="textPersonName"
+                android:text="@string/to"
+                android:textSize="20sp" />
+
+        </LinearLayout>
+
+    </HorizontalScrollView>
 
     <View
-        android:id="@+id/email_message_composing_divider_dash_between_to_subject"
+        android:id="@+id/email_message_composing_divider_dash_between_to_scroll_subject"
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:layout_marginTop="10dp"
         android:background="@color/bright_grey"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/email_message_composing_to" />
+        app:layout_constraintTop_toBottomOf="@id/email_message_composing_to_scroll" />
 
     <EditText
         android:id="@+id/email_message_composing_subject"
@@ -100,10 +132,12 @@
         android:layout_marginTop="10dp"
         android:layout_marginEnd="15dp"
         android:backgroundTint="@color/transparent"
+        android:clickable="true"
         android:text="@string/subject"
+        android:textSize="20sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/email_message_composing_divider_dash_between_to_subject" />
+        app:layout_constraintTop_toBottomOf="@id/email_message_composing_divider_dash_between_to_scroll_subject" />
 
     <View
         android:id="@+id/email_message_composing_divider_dash_between_subject_content_scroll"
@@ -113,26 +147,29 @@
         android:background="@color/bright_grey"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/email_message_composing_subject" />
+        app:layout_constraintTop_toBottomOf="@+id/email_message_composing_subject" />
 
     <ScrollView
         android:id="@+id/email_message_composing_content_scroll"
         android:layout_width="match_parent"
-        android:layout_height="453dp"
+        android:layout_height="444dp"
         android:layout_marginStart="10dp"
-        android:layout_marginEnd="10dp"
         android:layout_marginTop="10dp"
+        android:layout_marginEnd="10dp"
+        android:background="?android:attr/selectableItemBackground"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/email_message_composing_divider_dash_between_subject_content_scroll">
+        app:layout_constraintTop_toBottomOf="@+id/email_message_composing_subject">
 
         <EditText
             android:id="@+id/email_message_composing_content"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:background="@drawable/background_email_message_composing_from_to_layout_part"
             android:backgroundTint="@color/transparent"
             android:inputType="textMultiLine"
             android:text="@string/compose_message"
+            android:textSize="18sp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -144,7 +181,7 @@
         android:layout_height="30dp"
         android:layout_marginEnd="25dp"
         android:layout_marginBottom="18dp"
-        app:layout_constraintBottom_toTopOf="@id/email_message_composing_divider_dash_between_from_to"
+        app:layout_constraintBottom_toTopOf="@id/email_message_composing_divider_dash_between_from_scroll_to_scroll"
         app:layout_constraintEnd_toEndOf="parent" />
 
     <ImageView
@@ -153,7 +190,31 @@
         android:layout_height="30dp"
         android:layout_marginEnd="25dp"
         android:layout_marginBottom="18dp"
-        app:layout_constraintBottom_toTopOf="@id/email_message_composing_divider_dash_between_to_subject"
+        app:layout_constraintBottom_toTopOf="@id/email_message_composing_divider_dash_between_to_scroll_subject"
         app:layout_constraintEnd_toEndOf="parent" />
+
+    <View
+        android:id="@+id/email_message_composing_from_layout_clickable"
+        android:layout_width="match_parent"
+        android:layout_height="68dp"
+        android:clickable="true"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/email_message_composing_top" />
+
+    <View
+        android:id="@+id/email_message_composing_to_layout_clickable"
+        android:layout_width="match_parent"
+        android:layout_height="68dp"
+        android:clickable="true"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/email_message_composing_divider_dash_between_from_scroll_to_scroll" />
+
+    <android.support.constraint.Guideline
+        android:id="@+id/guideline3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_begin="266dp" />
+
 
 </android.support.constraint.ConstraintLayout>
