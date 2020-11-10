@@ -1,5 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
-
 <android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -44,30 +42,21 @@
 
     <HorizontalScrollView
         android:id="@+id/email_message_composing_from_scroll"
-        android:layout_width="326dp"
+        android:layout_width="275dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="15dp"
+        android:layout_marginEnd="10dp"
         android:layout_marginTop="10dp"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/email_message_composing_top">
+        app:layout_constraintTop_toBottomOf="@id/email_message_composing_top"
+        app:layout_constraintEnd_toStartOf="@id/email_message_composing_from_email_address_correct_layout">
 
         <LinearLayout
             android:id="@+id/email_message_composing_from_layout"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
-            android:focusable="true">
-
-            <EditText
-                android:id="@+id/email_message_composing_from_layout_part_origin"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:backgroundTint="@color/transparent"
-                android:focusable="true"
-                android:inputType="textPersonName"
-                android:text="@string/from"
-                android:textSize="20sp" />
-
-        </LinearLayout>
+            android:orientation="horizontal"
+            android:focusable="true"/>
 
     </HorizontalScrollView>
 
@@ -82,34 +71,31 @@
 
     <HorizontalScrollView
         android:id="@+id/email_message_composing_to_scroll"
-        android:layout_width="326dp"
+        android:layout_width="275dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="15dp"
         android:layout_marginTop="10dp"
-        android:layout_marginEnd="15dp"
+        android:layout_marginStart="15dp"
+        android:layout_marginEnd="10dp"
+        app:layout_constraintTop_toBottomOf="@id/email_message_composing_divider_dash_between_from_scroll_to_scroll"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/email_message_composing_divider_dash_between_from_scroll_to_scroll">
+        app:layout_constraintEnd_toStartOf="@id/email_message_composing_to_email_address_correct_layout"
+        app:layout_constraintBottom_toTopOf="@id/email_message_composing_divider_dash_between_to_scroll_subject">
 
         <LinearLayout
             android:id="@+id/email_message_composing_to_layout"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
-            android:background="?android:attr/selectableItemBackground"
             android:clickable="true"
+            android:orientation="horizontal"
             android:contextClickable="true">
-
-            <EditText
-                android:id="@+id/email_message_composing_to_layout_part_origin"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="326"
-                android:backgroundTint="@color/transparent"
-                android:clickable="true"
-                android:focusable="true"
-                android:inputType="textPersonName"
-                android:text="@string/to"
-                android:textSize="20sp" />
-
+             <EditText
+                 android:id="@+id/email_message_composing_to_layout_part_origin"
+                 android:layout_width="wrap_content"
+                 android:layout_height="wrap_content"
+                 android:backgroundTint="@color/transparent"
+                 android:inputType="textEmailAddress"
+                 android:text="@string/to"
+                 android:textSize="20sp"/>
         </LinearLayout>
 
     </HorizontalScrollView>
@@ -135,6 +121,7 @@
         android:clickable="true"
         android:text="@string/subject"
         android:textSize="20sp"
+        android:inputType="textEmailSubject"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/email_message_composing_divider_dash_between_to_scroll_subject" />
@@ -156,7 +143,6 @@
         android:layout_marginStart="10dp"
         android:layout_marginTop="10dp"
         android:layout_marginEnd="10dp"
-        android:background="?android:attr/selectableItemBackground"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/email_message_composing_subject">
@@ -165,7 +151,6 @@
             android:id="@+id/email_message_composing_content"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/background_email_message_composing_from_to_layout_part"
             android:backgroundTint="@color/transparent"
             android:inputType="textMultiLine"
             android:text="@string/compose_message"
@@ -175,21 +160,36 @@
 
     </ScrollView>
 
+    <View
+        android:id="@+id/email_message_composing_content_layout_clickable"
+        android:layout_width="match_parent"
+        android:layout_height="444dp"
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="10dp"
+        android:layout_marginTop="10dp"
+        app:layout_constraintTop_toBottomOf="@id/email_message_composing_divider_dash_between_subject_content_scroll"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+
     <ImageView
-        android:id="@+id/email_message_composing_email_address_from_correct_layout"
+        android:id="@+id/email_message_composing_from_email_address_correct_layout"
         android:layout_width="30dp"
         android:layout_height="30dp"
         android:layout_marginEnd="25dp"
-        android:layout_marginBottom="18dp"
+        app:layout_constraintVertical_bias="0.5"
+        app:layout_constraintTop_toBottomOf="@id/email_message_composing_top"
         app:layout_constraintBottom_toTopOf="@id/email_message_composing_divider_dash_between_from_scroll_to_scroll"
         app:layout_constraintEnd_toEndOf="parent" />
 
     <ImageView
-        android:id="@+id/email_message_composing_email_address_to_correct_layout"
+        android:id="@+id/email_message_composing_to_email_address_correct_layout"
         android:layout_width="30dp"
         android:layout_height="30dp"
         android:layout_marginEnd="25dp"
         android:layout_marginBottom="18dp"
+        app:layout_constraintVertical_bias="0.5"
+        app:layout_constraintStart_toEndOf="@id/email_message_composing_to_scroll"
         app:layout_constraintBottom_toTopOf="@id/email_message_composing_divider_dash_between_to_scroll_subject"
         app:layout_constraintEnd_toEndOf="parent" />
 
@@ -206,15 +206,11 @@
         android:layout_width="match_parent"
         android:layout_height="68dp"
         android:clickable="true"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/email_message_composing_divider_dash_between_from_scroll_to_scroll" />
-
-    <android.support.constraint.Guideline
-        android:id="@+id/guideline3"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        app:layout_constraintGuide_begin="266dp" />
-
+        app:layout_constraintStart_toEndOf="@id/email_message_composing_to_scroll"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/email_message_composing_divider_dash_between_to_scroll_subject"
+        app:layout_constraintTop_toBottomOf="@id/email_message_composing_divider_dash_between_from_scroll_to_scroll"
+        app:layout_constraintVertical_bias="0.5"
+        app:layout_constraintHorizontal_bias="0.5"/>
 
 </android.support.constraint.ConstraintLayout>
