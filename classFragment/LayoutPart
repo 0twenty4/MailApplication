@@ -1,0 +1,75 @@
+package com.example.mailapplication;
+
+import android.animation.ValueAnimator;
+import android.graphics.drawable.Drawable;
+import android.support.v4.app.Fragment;
+import android.support.v7.app.AppCompatActivity;
+import android.view.View;
+import android.view.LayoutInflater;
+import android.view.ViewGroup;
+import android.os.Bundle;
+import android.widget.ImageView;
+import android.widget.TextView;
+
+public class LayoutPart extends Fragment {
+    String eMailAddress;
+    boolean eMailAddressValid;
+    boolean fromLayoutPart;
+
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        return inflater.inflate(R.layout.email_message_composing_layout_part, container, false);
+    }
+
+    public void onActivityCreated(Bundle savedInstanceState) {
+        super.onActivityCreated(savedInstanceState);
+        final View layoutPart=getView();
+        final TextView eMailAddress= layoutPart.findViewById(R.id.email_message_composing_layout_part_email_address);
+        eMailAddress.setText(this.eMailAddress);
+        final ImageView delete=layoutPart.findViewById(R.id.email_message_composing_layout_part_delete);
+        final AppCompatActivity eMailMessageComposing = EMailService.getActivityCurrent();
+        final int blue = eMailMessageComposing.getColor(R.color.main_color);
+        final int red = eMailMessageComposing.getColor(R.color.red);
+        final int white = eMailMessageComposing.getColor(R.color.white);
+        final int black = eMailMessageComposing.getColor(R.color.black);
+        if (fromLayoutPart) {
+            Drawable layoutPartViewBackground=layoutPart.getBackground();
+            layoutPartViewBackground.setTint(blue);
+            eMailAddress.setTextColor(white);
+        } else {
+                final ValueAnimator backgroundAnimator;
+                if (eMailAddressValid) {
+                    backgroundAnimator=ValueAnimator.ofArgb(white, blue);
+                    ValueAnimator eMailAddressAnimator = ValueAnimator.ofArgb(black, white).setDuration(200);
+                    eMailAddressAnimator.addUpdateListener(new EMailService() {
+                        public void onAnimationUpdate(ValueAnimator animator) {
+                            eMailAddress.setTextColor((int) animator.getAnimatedValue());
+                        }
+                    });
+                    eMailAddressAnimator.start();
+                } else {
+                    backgroundAnimator=ValueAnimator.ofArgb(white, red);
+                    ValueAnimator deleteAnimator = ValueAnimator.ofArgb(red, black).setDuration(200);
+                    deleteAnimator.addUpdateListener(new EMailService() {
+                        public void onAnimationUpdate(ValueAnimator animator) {
+                            delete.setColorFilter((int) animator.getAnimatedValue());
+                        }
+                    });
+                    deleteAnimator.start();
+                }
+                backgroundAnimator.addUpdateListener(new EMailService() {
+                    public void onAnimationUpdate(ValueAnimator animator) {
+                        Drawable background = layoutPart.getBackground();
+                        background.setTint((int) animator.getAnimatedValue());
+                        layoutPart.setBackground(background);
+                    }
+                });
+                backgroundAnimator.start();
+            }
+        }
+
+    public void setLayoutPartData(String eMailAddress, boolean eMailAddressValid, boolean fromLayoutPart) {
+        this.eMailAddress=eMailAddress;
+        this.eMailAddressValid=eMailAddressValid;
+        this.fromLayoutPart=fromLayoutPart;
+    }
+}
