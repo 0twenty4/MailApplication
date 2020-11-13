@@ -10,11 +10,20 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
-import static android.widget.LinearLayout.LayoutParams.MATCH_PARENT;
-import static android.widget.LinearLayout.LayoutParams.WRAP_CONTENT;
+
+import java.util.ArrayList;
+
 
 public class EMailMessageComposing extends AppCompatActivity {
-    EditText toLayoutPartCurrent;
+    LinearLayout toLayout;
+    int toLayoutPartEditCount;
+    ArrayList<LayoutPart> toLayoutParts=new ArrayList<>();
+    EditText toLayoutEnter;
+    EMailService layoutPartFocusChangeListener;
+    boolean modeDeleteLayoutPart;
+    ColorStateList transparent;
+    EditText eMailAddressEdit;
+
 
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -28,53 +37,27 @@ public class EMailMessageComposing extends AppCompatActivity {
         getSupportFragmentManager().beginTransaction()
                 .add(fromLayoutId, fromLayoutPartChecked)
                 .commit();
-        final LinearLayout toLayout=findViewById(R.id.email_message_composing_to_layout);
-        final ColorStateList transparent=ColorStateList.valueOf(getColor(R.color.transparent));
+        toLayout=findViewById(R.id.email_message_composing_to_layout);
+        transparent=ColorStateList.valueOf(getColor(R.color.transparent));
         EMailService toLayoutTextChangedListener=new EMailService() {
             public void onTextChanged(CharSequence text, int start, int count, int after) {
-                final int charactersAmount = text.length();
-                if (charactersAmount > 0) {
-                    int characterLast = text.charAt(charactersAmount - 1);
-                    if (characterLast == ' ') {
-                        if (charactersAmount == 1) {
-                            toLayoutPartCurrent.setText("");
-                        } else {
-                            toLayout.removeView(toLayoutPartCurrent);
-                            FrameLayout toLayoutPartCheckedFrame=new FrameLayout(EMailMessageComposing.this);
-                            toLayoutPartCheckedFrame.setId(View.generateViewId());
+                if (text.length() > 0) {
+                    try {
+                        if (needToAddLayoutPart(text)) {
+                            FrameLayout toLayoutPartCheckedFrame = new FrameLayout(EMailMessageComposing.this);
                             toLayout.addView(toLayoutPartCheckedFrame);
-                            View space=new View(EMailMessageComposing.this);
-                            space.setLayoutParams(new LinearLayout.LayoutParams(MATCH_PARENT, 5));
-                            toLayout.addView(space);
-                            final String eMailAddressCurrent = text.toString();
-                            final LayoutPart toLayoutPartChecked=new LayoutPart();
-                            if (EMailService.eMailAddressValid(toLayoutPartCurrent))
-                                toLayoutPartChecked.setLayoutPartData(eMailAddressCurrent, true, false);
-                            else
-                                toLayoutPartChecked.setLayoutPartData(eMailAddressCurrent, false, false);
-                            final int toLayoutPartCheckedFrameId=toLayoutPartCheckedFrame.getId();
-                            getSupportFragmentManager().beginTransaction()
-                                    .add(toLayoutPartCheckedFrameId, toLayoutPartChecked)
-                                    .commit();
-                            EditText toLayoutPartNext = new EditText(EMailMessageComposing.this);
-                            toLayoutPartNext.setTextSize(18);
-                            int black = getColor(R.color.black);
-                            toLayoutPartNext.setTextColor(black);
-                            toLayoutPartNext.setBackgroundTintList(transparent);
-                            toLayoutPartNext.setInputType(InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
-                            toLayoutPartNext.setLayoutParams(new LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT));
-                            toLayout.addView(toLayoutPartNext);
-                            toLayout.requestFocus();
-                            toLayoutPartCurrent=toLayoutPartNext;
+                            toLayoutPartCheckedFrame.setId(View.generateViewId());
+                            int toLayoutPartCheckedFrameId = toLayoutPartCheckedFrame.getId();
+                            addToLayoutPart(toLayoutEnter, toLayoutPartCheckedFrameId);
                         }
-                    }
+                        toLayoutEnter.setText("");
+                    } catch (Exception e) {}
                 }
             }
         };
-        EditText toLayoutPartOrigin=findViewById(R.id.email_message_composing_to_origin);
-        toLayoutPartCurrent=toLayoutPartOrigin;
-        toLayoutPartOrigin.addTextChangedListener(toLayoutTextChangedListener);
-        toLayoutPartOrigin.setBackgroundTintList(transparent);
+        toLayoutEnter=findViewById(R.id.email_message_composing_to_enter);
+        toLayoutEnter.addTextChangedListener(toLayoutTextChangedListener);
+        toLayoutEnter.setBackgroundTintList(transparent);
         EditText subject=findViewById(R.id.email_message_composing_subject);
         subject.setBackgroundTintList(transparent);
         EditText content=findViewById(R.id.email_message_composing_content);
@@ -89,12 +72,80 @@ public class EMailMessageComposing extends AppCompatActivity {
                 }
             }
         });
-        toLayout.setOnHierarchyChangeListener(new EMailService() {
-            public void onChildViewAdded(View parent, View child) {
-                if (child instanceof EditText) {
-                    ((EditText) child).addTextChangedListener(toLayoutTextChangedListener);
-                }
+    }
+
+    public void deleteLayoutPart(LayoutPart layoutPart) {
+        View layoutPartFrame=(View) layoutPart.getView().getParent();
+        toLayout.removeView(layoutPartFrame);
+        toLayoutParts.remove(layoutPart);
+    }
+
+    public void setModeEditLayoutPartOn(LayoutPart layoutPart) {
+        try {
+            if (eMailAddressEdit == null) {
+                eMailAddressEdit = new EditText(this);
+                eMailAddressEdit.setTextSize(18);
+                int black = getColor(R.color.black);
+                eMailAddressEdit.setTextColor(black);
+                eMailAddressEdit.setBackgroundTintList(transparent);
+                eMailAddressEdit.setInputType(InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+                eMailAddressEdit.setOnFocusChangeListener(new EMailService() {
+                    public void onFocusChange(View view, boolean hasFocus) {
+                        if (!hasFocus) {
+                            toLayout.removeView(eMailAddressEdit);
+                            FrameLayout toLayoutPartFrame = new FrameLayout(EMailMessageComposing.this);
+                            toLayout.addView(toLayoutPartFrame, toLayoutPartEditCount);
+                            toLayoutPartFrame.setId(View.generateViewId());
+                            int toLayoutPartFrameId = toLayoutPartFrame.getId();
+                            addToLayoutPart(eMailAddressEdit, toLayoutPartFrameId);
+                        }
+                    }
+                });
+                eMailAddressEdit.addTextChangedListener(new EMailService() {
+                    public void onTextChanged(CharSequence text, int start, int count, int after) {
+                        if (text.length() > 0) {
+                            try {
+                                if (needToAddLayoutPart(text)) {
+                                    eMailAddressEdit.clearFocus();
+                                    toLayoutEnter.requestFocus();
+                                }
+                            } catch (Exception e) {
+                            }
+                        }
+                    }
+                });
             }
-        });
+            int toLayoutPartIndex = toLayoutParts.indexOf(layoutPart);
+            toLayout.removeViewAt(toLayoutPartIndex);
+            toLayout.addView(eMailAddressEdit, toLayoutPartIndex);
+            eMailAddressEdit.requestFocus();
+        } catch (Exception e) {
+            System.out.println(e.getClass().getName());
+        }
+    }
+
+    public boolean needToAddLayoutPart(CharSequence text) throws Exception {
+        int charactersCount=text.length();
+        char characterLast=text.charAt(charactersCount-1);
+        if (characterLast==' ') {
+            if (charactersCount == 1)
+                return false;
+            else
+                return true;
+        }
+        throw new Exception();
+    }
+
+    public void addToLayoutPart(EditText eMailAddressEdit, int layoutPartFrameId) {
+        LayoutPart layoutPart=new LayoutPart();
+        String eMailAddress=eMailAddressEdit.getText().toString();
+        if (EMailService.eMailAddressValid(eMailAddressEdit))
+            layoutPart.setLayoutPartData(eMailAddress, true, false);
+        else
+            layoutPart.setLayoutPartData(eMailAddress, false,false);
+        getSupportFragmentManager().beginTransaction()
+                .add(layoutPartFrameId, layoutPart)
+                .commit();
+        toLayoutParts.add(layoutPart);
     }
 }
