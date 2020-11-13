@@ -17,7 +17,7 @@ import static android.view.View.INVISIBLE;
 import static android.view.View.VISIBLE;
 
 
-public class SignInMenu extends AppCompatActivity {
+public class MenuSignIn extends AppCompatActivity {
     private static boolean loginCorrectOrWrong = false;
     private static boolean loginCorrect = false;
     private static boolean passwordCorrectOrWrong = false;
@@ -40,8 +40,8 @@ public class SignInMenu extends AppCompatActivity {
         SingleLineTransformationMethod formatText = SingleLineTransformationMethod.getInstance();
         EditText login = findViewById(R.id.login);
         EditText password = findViewById(R.id.password);
-        login.setText("stringlovejs@gmail.com");
-        password.setText("12danilporsinv20042511");
+        login.setText("bettysu12234@gmail.com");
+        password.setText("15973q15973z15973m");
         password.setTransformationMethod(formatPassword);
         Button buttonSignIn = findViewById(R.id.sign_in_button);
         FrameLayout passwordVisibility = findViewById(R.id.password_visibility);
@@ -94,9 +94,10 @@ public class SignInMenu extends AppCompatActivity {
                         accountNotExist.setVisibility(INVISIBLE);
                 }
                 if (!hasFocus) {
-                    if (!EMailService.loginEmpty(login)) {
+                    final String loginString=login.getText().toString();
+                    if (!EMailService.fieldEmpty(loginString)) {
                         loginCorrectOrWrong = true;
-                        if (EMailService.loginCorrect(login)) {
+                        if (EMailService.eMailAddressValid(loginString)) {
                             loginCorrect = true;
                             animatorMatchingLogin.start();
                             if (passwordCorrect) {
@@ -131,9 +132,10 @@ public class SignInMenu extends AppCompatActivity {
                         accountNotExist.setVisibility(INVISIBLE);
                 }
                 if (!hasFocus) {
-                    if (!EMailService.passwordEmpty(password)) {
+                    final String passwordString=password.getText().toString();
+                    if (!EMailService.fieldEmpty(passwordString)) {
                         passwordCorrectOrWrong = true;
-                        if (EMailService.passwordCorrect(password)) {
+                        if (EMailService.passwordCorrect(passwordString)) {
                             passwordCorrect = true;
                             animatorMatchingPassword.start();
                             if (loginCorrect) {
@@ -157,17 +159,17 @@ public class SignInMenu extends AppCompatActivity {
         });
         buttonSignIn.setOnClickListener(new EMailService() {
             public void onClick(View view) {
-                if (!(SignInMenu.loginCorrect && SignInMenu.passwordCorrect)) {
-                    if (!SignInMenu.loginCorrectOrWrong && !SignInMenu.passwordCorrectOrWrong) {
-                        SignInMenu.loginCorrectOrWrong = true;
+                if (!(MenuSignIn.loginCorrect && MenuSignIn.passwordCorrect)) {
+                    if (!MenuSignIn.loginCorrectOrWrong && !MenuSignIn.passwordCorrectOrWrong) {
+                        MenuSignIn.loginCorrectOrWrong = true;
                         animatorNotMatchingLogin.start();
-                        SignInMenu.passwordCorrectOrWrong = true;
+                        MenuSignIn.passwordCorrectOrWrong = true;
                         animatorNotMatchingPassword.start();
-                    } else if (SignInMenu.loginCorrectOrWrong && !SignInMenu.passwordCorrectOrWrong) {
-                        SignInMenu.passwordCorrectOrWrong = true;
+                    } else if (MenuSignIn.loginCorrectOrWrong && !MenuSignIn.passwordCorrectOrWrong) {
+                        MenuSignIn.passwordCorrectOrWrong = true;
                         animatorNotMatchingPassword.start();
-                    } else if (!SignInMenu.loginCorrectOrWrong && SignInMenu.passwordCorrectOrWrong) {
-                        SignInMenu.loginCorrectOrWrong = true;
+                    } else if (!MenuSignIn.loginCorrectOrWrong && MenuSignIn.passwordCorrectOrWrong) {
+                        MenuSignIn.loginCorrectOrWrong = true;
                         animatorNotMatchingLogin.start();
                     }
                 } else {
@@ -197,15 +199,3 @@ public class SignInMenu extends AppCompatActivity {
         });
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
