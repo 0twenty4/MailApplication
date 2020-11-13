@@ -36,7 +36,6 @@ import java.util.Date;
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -54,6 +53,8 @@ import javax.mail.Session;
 import javax.mail.Store;
 import javax.mail.Transport;
 import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
+
 import java.io.InputStream;
 
 public class EMailService implements Animation.AnimationListener, ValueAnimator.AnimatorListener, ValueAnimator.AnimatorUpdateListener,
@@ -376,13 +377,52 @@ public class EMailService implements Animation.AnimationListener, ValueAnimator.
         });
     }
 
-    public static void sendEMailMessage(TextView eMailMessageFrom, TextView eMailMessageTo, TextView eMailMessageSubject, TextView eMailMessageContent) {
+    public static void sendEMailMessage(ArrayList<LayoutPart> eMailMessageTo, TextView eMailMessageSubject, TextView eMailMessageContent) {
+        View eMailMessageComposingTop=activityCurrent.findViewById(R.id.email_message_composing_top);
+        eMailMessageComposingTop.setElevation(0);
         fragmentLoadingCurrent=new EMailMessageSending();
         activityCurrentFragmentManager.beginTransaction()
-                .setCustomAnimations(R.anim.slide_from_left_to_middle, 0)
+                .setCustomAnimations(R.anim.slide_from_right_to_middle, R.anim.slide_from_middle_to_right)
                 .add(activityCurrentFragmentLoadingLayoutId, fragmentLoadingCurrent)
                 .commit();
         executor.execute((Runnable) () -> {
+            try {
+                MimeMessage eMailMessage = new MimeMessage(session);
+                eMailMessage.setFrom(currentUserEMailAddress);
+                eMailMessage.setSubject(eMailMessageSubject.getText().toString());
+                eMailMessage.setContent(eMailMessageContent.getText().toString(), TEXT_HTML);
+                final String firstEMailAddress=eMailMessageTo.get(0).eMailAddress;
+                if (eMailMessageTo.size()==1) {
+                    System.out.println(firstEMailAddress);
+                    eMailMessage.setRecipients(Message.RecipientType.TO, eMailMessageTo.get(0).eMailAddress);
+                } else {
+                    StringBuilder eMailAddresses = new StringBuilder();
+                    eMailAddresses.append(firstEMailAddress);
+                    if (eMailMessageTo.size() > 1) {
+                        final String comma = ",";
+                        for (int index = 1; index < eMailMessageTo.size(); index++) {
+                            String eMailAddress = eMailMessageTo.get(index).eMailAddress;
+                            eMailAddresses.append(comma).append(eMailAddress);
+                        }
+                    }
+                    eMailMessage.setRecipients(Message.RecipientType.TO, eMailAddresses.toString());
+                }
+                eMailMessage.saveChanges();
+                Transport.send(eMailMessage, currentUserEMailAddress, currentUserPassword);
+                activityCurrent.runOnUiThread((Runnable) () -> {
+                    activityCurrent.onBackPressed();
+                });
+            } catch (Exception e) {
+                activityCurrent.runOnUiThread((Runnable) () -> {
+                    activityCurrentFragmentManager.beginTransaction()
+                            .remove(fragmentLoadingCurrent)
+                            .commit();
+                    eMailMessageComposingTop.setElevation(2);
+                    System.out.println(e.getClass().getName());
+                    StackTraceElement[] trace=e.getStackTrace();
+                    for (StackTraceElement element:trace) System.out.println(element);
+                });
+            }
         });
     }
 
@@ -391,13 +431,13 @@ public class EMailService implements Animation.AnimationListener, ValueAnimator.
         currentUserPassword = password;
     }
 
-    public static boolean fieldEmpty(TextView field) {
-        return field.getText().toString().isEmpty();
+    public static boolean fieldEmpty(String field) {
+        return field.isEmpty();
     }
 
-    public static boolean eMailAddressValid(TextView eMailAddress) {
+    public static boolean eMailAddressValid(String eMailAddress) {
         try {
-            InternetAddress internetAddress = new InternetAddress(eMailAddress.getText().toString());
+            InternetAddress internetAddress = new InternetAddress(eMailAddress);
             internetAddress.validate();
             return true;
         } catch (Exception e) {
@@ -405,11 +445,10 @@ public class EMailService implements Animation.AnimationListener, ValueAnimator.
         }
     }
 
-    public static boolean passwordCorrect(TextView password) {
+    public static boolean passwordCorrect(String password) {
         boolean passwordCorrect=false;
-        String passwordString = password.getText().toString();
-        if (passwordString.length() >= 8) {
-            char[] charactersPasswordString = passwordString.toCharArray();
+        if (password.length() >= 8) {
+            char[] charactersPasswordString = password.toCharArray();
             ArrayList<Character> symbolsPasswordString = new ArrayList<>();
             for (char character : charactersPasswordString) {
                 if (character != ' ') symbolsPasswordString.add(character);
@@ -848,7 +887,6 @@ public class EMailService implements Animation.AnimationListener, ValueAnimator.
                 EMailService.hasLogOut=true;
                 folder.close();
                 store.close();
-                transport.close();
                 EMailService.hasDisplayedMessages=false;
                 eMailMessagesDisplayed.clear();
                 eMailMessagesLoadedCurrent.clear();
@@ -954,16 +992,3 @@ public class EMailService implements Animation.AnimationListener, ValueAnimator.
 
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
