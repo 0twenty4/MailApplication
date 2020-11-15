@@ -3,7 +3,7 @@ package com.example.mailapplication;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.ColorStateList;
-import android.support.v7.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
@@ -11,6 +11,10 @@ import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.Toast;
+
+import static android.view.View.VISIBLE;
+import static android.view.View.GONE;
 
 import java.util.ArrayList;
 
@@ -23,7 +27,7 @@ public class EMailMessageComposing extends AppCompatActivity {
     boolean modeEditEMailAddressOn;
     EMailService toLayoutTextChangedListener;
     InputMethodManager keyboard;
-
+    boolean keyboardShown;
 
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -31,8 +35,7 @@ public class EMailMessageComposing extends AppCompatActivity {
         EMailService.setCurrentActivity(this, R.id.email_message_composing);
         FrameLayout fromLayout=findViewById(R.id.email_message_composing_from_layout);
         String currentUserEMailAddress=EMailService.getCurrentUserEMailAddress();
-        LayoutPart fromLayoutPartChecked=new LayoutPart();
-        fromLayoutPartChecked.setLayoutPartData(currentUserEMailAddress, true, true);
+        LayoutPart fromLayoutPartChecked=new LayoutPart(currentUserEMailAddress, true, true);
         int fromLayoutId=fromLayout.getId();
         getSupportFragmentManager().beginTransaction()
                 .add(fromLayoutId, fromLayoutPartChecked)
@@ -46,19 +49,16 @@ public class EMailMessageComposing extends AppCompatActivity {
                     if (characterLast == ' ') {
                         if (charactersCount != 1) {
                             if (modeEditEMailAddressOn) {
-                                finishLastEMailAddressEdit();
-                                modeEditEMailAddressOn=false;
+                                toLayout.removeView(toLayoutEnter);
+                                addToLayoutPart(toLayoutPartEditCount);
                                 toLayout.addView(toLayoutEnter, 0);
-                                toLayout.requestFocus();
+                                toLayoutEnter.requestFocus();
+                                modeEditEMailAddressOn=false;
                             } else {
-                                FrameLayout toLayoutPartFrame = new FrameLayout(EMailMessageComposing.this);
-                                toLayout.addView(toLayoutPartFrame);
-                                toLayoutPartFrame.setId(View.generateViewId());
-                                int toLayoutPartFrameId = toLayoutPartFrame.getId();
-                                addToLayoutPart(text.toString(), toLayoutPartFrameId);
+                                addToLayoutPart(toLayout.getChildCount());
                             }
-                            toLayoutEnter.setText("");
                         }
+                        toLayoutEnter.setText("");
                     }
                 }
             }
@@ -71,53 +71,101 @@ public class EMailMessageComposing extends AppCompatActivity {
         subject.setBackgroundTintList(transparent);
         EditText content=findViewById(R.id.email_message_composing_content);
         content.setBackgroundTintList(transparent);
-        View contentLayoutClickable=findViewById(R.id.email_message_composing_content_layout_clickable);
         ImageView back=findViewById(R.id.email_message_composing_back);
+        ImageView attachment=findViewById(R.id.email_message_composing_attachment);
         ImageView send=findViewById(R.id.email_message_composing_send);
+        View toLayoutClickable=findViewById(R.id.email_message_composing_to_layout_clickable);
+        View contentLayoutClickable=findViewById(R.id.email_message_composing_content_layout_clickable);
         keyboard=(InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         EMailService eMailMessageComposingClickListener= new EMailService() {
-            final int contentLayoutClickableId = contentLayoutClickable.getId();
             final int backId = back.getId();
+            final int attachmentId=attachment.getId();
+            final int sendId=send.getId();
+            final int toLayoutClickableId=toLayoutClickable.getId();
+            final int contentLayoutClickableId = contentLayoutClickable.getId();
+
             public void onClick(View view) {
                 final int viewId = view.getId();
-                if (viewId == contentLayoutClickableId) {
-                    if (!content.hasFocus()) {
-                        content.requestFocus();
-                        keyboard.showSoftInput(content, InputMethodManager.SHOW_FORCED);
-                    }
-                } else if (viewId == backId)
+                if (viewId == backId)
                     onBackPressed();
-                else {
-                    EMailService.sendEMailMessage(toLayoutParts, subject, content);
+                else if (viewId == attachmentId) {
+                    Intent intent = new Intent();
+                    intent.setAction(Intent.ACTION_OPEN_DOCUMENT);
+                } else {
+                    final View currentFocus=getCurrentFocus();
+                    if (currentFocus!=null)
+                        currentFocus.clearFocus();
+                    if (viewId == sendId) {
+                        if (keyboardShown) {
+                            keyboard.hideSoftInputFromWindow(getWindow().getDecorView().getWindowToken(), 0);
+                            keyboardShown = false;
+                        }
+                        EMailService.sendEMailMessage(toLayoutParts, subject, content);
+                    } else {
+                        final View viewToShowKeyboard;
+                        if (viewId == toLayoutClickableId) {
+                            toLayout.addView(toLayoutEnter, 0);
+                            String toLayoutEnterText = toLayoutEnter.getText().toString();
+                            if (!toLayoutEnterText.isEmpty())
+                                toLayoutEnter.setText("");
+                            toLayoutEnter.requestFocus();
+                            toLayoutClickable.setVisibility(GONE);
+                            viewToShowKeyboard=toLayoutEnter;
+                        } else {
+                            if (viewId == contentLayoutClickableId) {
+                                content.requestFocus();
+                                viewToShowKeyboard=content;
+                            }
+                            else {
+                                subject.requestFocus();
+                                viewToShowKeyboard=subject;
+                            }
+                            toLayout.removeView(toLayoutEnter);
+                            final boolean toLayoutEnterEmpty=toLayoutEnter.getText().toString().isEmpty();
+                            if (modeEditEMailAddressOn) {
+                                modeEditEMailAddressOn = false;
+                                if (!toLayoutEnterEmpty)
+                                    addToLayoutPart(toLayoutPartEditCount);
+                            } else {
+                                if (!toLayoutEnterEmpty)
+                                    addToLayoutPart(0);
+                            }
+                            toLayoutClickable.setVisibility(VISIBLE);
+                        }
+                        if (!keyboardShown) {
+                            System.out.println("hellO");
+                            keyboard.showSoftInput(viewToShowKeyboard, InputMethodManager.SHOW_FORCED);
+                            keyboardShown=true;
+                        }
+                    }
                 }
             }
         };
-        contentLayoutClickable.setOnClickListener(eMailMessageComposingClickListener);
         back.setOnClickListener(eMailMessageComposingClickListener);
+        attachment.setOnClickListener(eMailMessageComposingClickListener);
         send.setOnClickListener(eMailMessageComposingClickListener);
-        toLayout.setOnHierarchyChangeListener(new EMailService() {
-            public void onChildViewAdded(View parent, View child) {
-                if (child instanceof EditText) {
-                    child.setOnFocusChangeListener(null);
-                    child.requestFocus();
-                }
-            }
-        });
-
+        toLayoutClickable.setOnClickListener(eMailMessageComposingClickListener);
+        View subjectLayoutClickable=findViewById(R.id.email_message_composing_subject_layout_clickable);
+        subjectLayoutClickable.setOnClickListener(eMailMessageComposingClickListener);
+        contentLayoutClickable.setOnClickListener(eMailMessageComposingClickListener);
+        toLayoutClickable.bringToFront();
+        subjectLayoutClickable.bringToFront();
     }
 
     public void deleteToLayoutPart(LayoutPart layoutPart) {
+        System.out.println("im here");
         View layoutPartFrame=(View) layoutPart.getView().getParent();
         toLayout.removeView(layoutPartFrame);
         toLayoutParts.remove(layoutPart);
     }
 
     public void setModeEditLayoutPartOn(LayoutPart toLayoutPart) {
+        toLayout.removeView(toLayoutEnter);
         if (!modeEditEMailAddressOn) {
             modeEditEMailAddressOn = true;
-            toLayout.removeView(toLayoutEnter);
-        } else
-            finishLastEMailAddressEdit();
+        } else {
+            addToLayoutPart(toLayoutPartEditCount);
+        }
         toLayoutPartEditCount=toLayoutParts.indexOf(toLayoutPart);
         toLayoutParts.remove(toLayoutPart);
         toLayout.removeViewAt(toLayoutPartEditCount);
@@ -131,25 +179,21 @@ public class EMailMessageComposing extends AppCompatActivity {
         toLayoutEnter.addTextChangedListener(toLayoutTextChangedListener);
     }
 
-    public void finishLastEMailAddressEdit() {
-        toLayout.removeView(toLayoutEnter);
-        FrameLayout toLayoutPartFrame = new FrameLayout(EMailMessageComposing.this);
-        toLayout.addView(toLayoutPartFrame, toLayoutPartEditCount);
+    public void addToLayoutPart(int count) {
+        FrameLayout toLayoutPartFrame = new FrameLayout(this);
+        toLayout.addView(toLayoutPartFrame, count);
         toLayoutPartFrame.setId(View.generateViewId());
         int toLayoutPartFrameId = toLayoutPartFrame.getId();
         String eMailAddress=toLayoutEnter.getText().toString();
-        addToLayoutPart(eMailAddress, toLayoutPartFrameId);
-    }
-
-
-    public void addToLayoutPart(String eMailAddress, int layoutPartFrameId) {
-        LayoutPart toLayoutPart=new LayoutPart();
-        if (EMailService.eMailAddressValid(eMailAddress))
-            toLayoutPart.setLayoutPartData(eMailAddress, true, false);
-        else
-            toLayoutPart.setLayoutPartData(eMailAddress, false,false);
+        final LayoutPart toLayoutPart;
+        if (EMailService.eMailAddressValid(eMailAddress)) {
+            toLayoutPart = new LayoutPart(eMailAddress, true, false);
+        }
+        else {
+            toLayoutPart = new LayoutPart(eMailAddress, false, false);
+        }
         getSupportFragmentManager().beginTransaction()
-                .add(layoutPartFrameId, toLayoutPart)
+                .add(toLayoutPartFrameId, toLayoutPart)
                 .commit();
         if (modeEditEMailAddressOn)
             toLayoutParts.add(toLayoutPartEditCount, toLayoutPart);
@@ -158,16 +202,18 @@ public class EMailMessageComposing extends AppCompatActivity {
     }
 
     public void onBackPressed() {
-        if (modeEditEMailAddressOn) {
+        if (keyboardShown)
+            keyboardShown = false;
+        else {
+            if (modeEditEMailAddressOn) {
                 String space = "space ";
                 toLayoutTextChangedListener.onTextChanged(space, 0, 0, 0);
-                keyboard.showSoftInput(toLayoutEnter, InputMethodManager.HIDE_NOT_ALWAYS);
-        } else {
-            Intent intent=new Intent(this, MenuMain.class);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            startActivity(intent);
+            } else {
+                Intent intent = new Intent(this, MenuMain.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(intent);
+            }
         }
-
     }
 }
