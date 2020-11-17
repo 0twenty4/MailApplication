@@ -8,12 +8,31 @@
     android:layout_height="match_parent"
     android:background="@color/white">
 
+    <View
+        android:id="@+id/email_message_composing_shadow"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:alpha="0"
+        android:foreground="@color/shadow"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <FrameLayout
+        android:id="@+id/email_message_composing_entering_file_name_layout"
+        android:layout_width="330dp"
+        android:layout_height="154dp"
+        android:layout_marginBottom="50dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"/>
+
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/email_message_composing_top"
         android:layout_width="match_parent"
         android:layout_height="70dp"
         android:background="@drawable/background"
-        android:elevation="2dp"
+        android:elevation="5dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
@@ -34,7 +53,7 @@
             android:id="@+id/email_message_composing_attachment"
             android:layout_width="35dp"
             android:layout_height="35dp"
-            android:layout_marginEnd="35dp"
+            android:layout_marginEnd="40dp"
             android:src="@drawable/attachment"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@id/email_message_composing_send"
@@ -56,6 +75,15 @@
 
 
     </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <FrameLayout
+        android:id="@+id/email_message_composing_attachment_menu_layout"
+        android:layout_width="117dp"
+        android:layout_height="134dp"
+        android:layout_marginEnd="54dp"
+        android:elevation="2dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/email_message_composing_top" />
 
     <ScrollView
         android:layout_width="match_parent"
@@ -201,10 +229,10 @@
                 android:layout_marginTop="10dp"
                 android:layout_marginEnd="10dp"
                 android:backgroundTint="@color/transparent"
+                android:focusable="false"
                 android:hint="@string/subject"
                 android:inputType="textEmailSubject"
                 android:textSize="20sp"
-                android:focusable="false"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/email_message_composing_divider_dash_between_to_layout_subject" />
@@ -231,17 +259,67 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/email_message_composing_divider_dash_between_subject_content_scroll">
 
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:divider="@drawable/divider_email_message_composing_content_layout"
+                    android:showDividers="middle"
+                    android:orientation="vertical">
+
                 <EditText
                     android:id="@+id/email_message_composing_content"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:backgroundTint="@color/transparent"
+                    android:focusable="false"
                     android:hint="@string/compose_message"
                     android:inputType="textMultiLine"
                     android:textSize="18sp"
-                    android:focusable="false"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
+                    app:layout_constraintTop_toTopOf="parent"/>
+
+                    <HorizontalScrollView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <LinearLayout
+                            android:id="@+id/email_message_composing_attachment_image_layout"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:divider="@color/white"
+                            android:dividerPadding="10dp"
+                            android:orientation="horizontal"/>
+
+                    </HorizontalScrollView>
+
+                    <HorizontalScrollView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                    <LinearLayout
+                        android:id="@+id/email_message_composing_attachment_document_layout"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:divider="@color/white"
+                        android:dividerPadding="10dp"
+                        android:orientation="horizontal"/>
+
+                    </HorizontalScrollView>
+
+                    <HorizontalScrollView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                    <LinearLayout
+                        android:id="@+id/email_message_composing_attachment_audio_layout"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:divider="@color/white"
+                        android:dividerPadding="10dp"
+                        android:orientation="horizontal"/>
+
+                    </HorizontalScrollView>
+                </LinearLayout>
 
             </ScrollView>
 
