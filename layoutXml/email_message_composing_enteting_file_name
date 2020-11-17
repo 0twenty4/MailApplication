@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="330dp"
+    android:layout_height="wrap_content"
+    android:background="@drawable/background_email_message_composing_entering_file_name">
+
+    <TextView
+        android:id="@+id/email_message_composing_entering_file_name_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="40dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginEnd="40dp"
+        android:text="@string/file_name"
+        android:textColor="@color/black"
+        android:textSize="25sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <View
+        android:id="@+id/email_message_composing_entering_file_name_divider_text_enter"
+        android:layout_width="330dp"
+        android:layout_height="1dp"
+        android:layout_marginTop="10dp"
+        android:background="@color/bright_grey"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/email_message_composing_entering_file_name_text" />
+
+    <EditText
+        android:id="@+id/email_message_composing_entering_file_name_enter"
+        android:layout_width="330dp"
+        android:layout_height="wrap_content"
+        android:backgroundTint="@color/transparent"
+        android:textSize="18sp"
+        android:inputType="text"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/email_message_composing_entering_file_name_divider_text_enter" />
+
+    <View
+        android:id="@+id/email_message_composing_entering_file_name_divider_enter_ok_cancel"
+        android:layout_width="330dp"
+        android:layout_height="1dp"
+        android:background="@color/bright_grey"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/email_message_composing_entering_file_name_enter" />
+
+    <View
+        android:id="@+id/email_message_composing_entering_file_name_divider_ok_cancel"
+        android:layout_width="1dp"
+        android:layout_height="54dp"
+        android:background="@color/bright_grey"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/email_message_composing_entering_file_name_divider_enter_ok_cancel" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="15dp"
+        android:text="@string/ok"
+        android:textColor="@color/black"
+        android:textSize="18sp"
+        app:layout_constraintEnd_toStartOf="@id/email_message_composing_entering_file_name_divider_ok_cancel"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/email_message_composing_entering_file_name_divider_enter_ok_cancel" />
+
+    <View
+        android:id="@+id/email_message_composing_entering_file_name_ok_layout_clickable"
+        android:layout_width="166dp"
+        android:layout_height="54dp"
+        android:background="?attr/selectableItemBackground"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="15dp"
+        android:text="@string/cancel"
+        android:textColor="@color/black"
+        android:textSize="18sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toEndOf="@id/email_message_composing_entering_file_name_divider_ok_cancel"
+        app:layout_constraintTop_toBottomOf="@id/email_message_composing_entering_file_name_divider_enter_ok_cancel" />
+
+    <View
+        android:id="@+id/email_message_composing_entering_file_name_cancel_layout_clickable"
+        android:layout_width="166dp"
+        android:layout_height="54dp"
+        android:background="?attr/selectableItemBackground"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guideline2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_begin="189dp" />
+</androidx.constraintlayout.widget.ConstraintLayout>
