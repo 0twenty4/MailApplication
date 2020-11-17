@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.mailapplication">
     <uses-permission android:name="android.permission.INTERNET"/>
@@ -18,16 +17,21 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".SignInMenu">
+            android:name=".MenuSignIn">
         </activity>
         <activity
-            android:name=".MainMenu">
+            android:name=".MenuMain">
         </activity>
         <activity
             android:name=".EMailMessageOpen">
         </activity>
         <activity
-            android:name=".EMailMessageComposing">
+            android:name=".EMailMessageComposing"
+            android:windowSoftInputMode="adjustNothing">
+            <intent-filter>
+                <action android:name="android.intent.action.GET_CONTENT"/>
+                <category android:name="android.intent.category.TYPED_OPENABLE"/>
+            </intent-filter>
         </activity>
     </application>
 </manifest>
