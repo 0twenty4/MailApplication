@@ -135,3 +135,143 @@ public class MainMenu extends AppCompatActivity {
 
 
 
+package com.example.mailapplication;
+
+import android.animation.Animator;
+import android.animation.ValueAnimator;
+import android.content.Intent;
+import android.os.Bundle;
+import androidx.fragment.app.Fragment;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.FragmentManager;
+
+import android.view.View;
+import android.view.ViewPropertyAnimator;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
+import android.widget.ScrollView;
+
+import java.lang.ref.WeakReference;
+
+public class MenuMain extends AppCompatActivity {
+
+    public void onCreate(Bundle savedInstanceState) {
+        boolean hasDisplayedMessages = EMailService.hasDisplayedMessages();
+        if (hasDisplayedMessages)
+            overridePendingTransition(R.anim.slide_from_left_to_middle, R.anim.slide_from_middle_to_right);
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.main_menu);
+        EMailService.setCurrentActivity(this, R.id.main_menu_loading_layout);
+        View mainMenuClickLayout=findViewById(R.id.main_menu_root_click_layout);
+        mainMenuClickLayout.bringToFront();
+        mainMenuClickLayout.setOnClickListener(new EMailService() {
+            public void onClick(View view) {
+                setModeMainMenuConfirmingDeletingOff();
+            }
+        });
+        View mainMenuConfirmingDeletingLayout=findViewById(R.id.main_menu_confirming_deleting_layout);
+        mainMenuConfirmingDeletingLayout.bringToFront();
+        ScrollView mainMenuScroll = findViewById(R.id.main_menu_scroll);
+        int currentScrollY = EMailService.getCurrentMainMenuScrollY();
+        mainMenuScroll.post((Runnable) () -> {
+            mainMenuScroll.scrollTo(0, currentScrollY);
+        });
+        int eMailMessagesLayout = R.id.main_menu_email_messages_layout;
+        FrameLayout mainMenuShowMoreLayout=findViewById(R.id.main_menu_show_more_layout);
+        mainMenuShowMoreLayout.bringToFront();
+        int showMoreLayoutId = R.id.main_menu_show_more_layout;
+        ImageView mainMenuShowMore = findViewById(R.id.main_menu_show_more);
+        mainMenuShowMore.setOnClickListener(new EMailService() {
+            boolean mainMenuShowMoreShown;
+
+            public void onClick(View view) {
+                mainMenuShowMore.setClickable(false);
+                if (!mainMenuShowMoreShown) {
+                    Fragment mainMenuShowMoreFragment = new WeakReference<>
+                            (new ShowMoreMainMenu())
+                            .get();
+                    mainMenuShowMoreShown = true;
+                    getSupportFragmentManager().beginTransaction()
+                            .add(showMoreLayoutId, mainMenuShowMoreFragment, "main menu show more")
+                            .commit();
+                } else {
+                    mainMenuShowMoreShown=false;
+                    FragmentManager fragmentManager=getSupportFragmentManager();
+                    getSupportFragmentManager().beginTransaction()
+                            .remove(fragmentManager.findFragmentByTag("main menu show more"))
+                            .commit();
+                }
+            }
+        });
+        ImageView mainMenuTick=findViewById(R.id.main_menu_tick);
+        mainMenuTick.setOnClickListener(new EMailService() {
+            public void onClick(View view) {
+                boolean eMailMessagesDisplayedTicked=EMailService.getAreEMailMessagesDisplayedTicked();
+                if (!eMailMessagesDisplayedTicked)
+                    EMailService.setEMailMessagesDisplayedTicked(true);
+                else
+                    EMailService.setEMailMessagesDisplayedTicked(false);
+            }
+        });
+        findViewById(R.id.main_menu_shadow).bringToFront();
+        ImageView mainMenuDelete=findViewById(R.id.main_menu_delete);
+        mainMenuDelete.setOnClickListener(new EMailService() {
+            public void onClick(View view) {
+                int eMailMessagesDisplayedTickedAmount=getEMailMessagesDisplayedTickedAmount();
+                if (eMailMessagesDisplayedTickedAmount>0)
+                    EMailService.setModeMainMenuConfirmingDeletingOn(null);
+            }
+        });
+        ImageView mainMenuCompose=findViewById(R.id.main_menu_compose);
+        mainMenuCompose.setOnClickListener(new EMailService() {
+
+            public void onClick(View view) {
+                final ValueAnimator mainMenuValueComposeAnimator=ValueAnimator.ofFloat(10, 0).setDuration(100);
+                final ViewPropertyAnimator mainMenuComposePropertyAnimator=mainMenuCompose.animate().setDuration(100);
+                mainMenuValueComposeAnimator.addUpdateListener(new EMailService() {
+                    public void onAnimationUpdate(ValueAnimator animator) {
+                        mainMenuCompose.setElevation((float) animator.getAnimatedValue());
+                    }
+                });
+                mainMenuValueComposeAnimator.addListener(new EMailService() {
+                    public void onAnimationEnd(Animator animator) {
+                        mainMenuValueComposeAnimator.setFloatValues(0, 10);
+                        mainMenuValueComposeAnimator.removeAllListeners();
+                        mainMenuValueComposeAnimator.addListener(new EMailService() {
+                            public void onAnimationEnd(Animator animator) {
+                                saveDisplayedEMailMessages();
+                                Intent intent=new Intent(MenuMain.this, EMailMessageComposing.class);
+                                startActivity(intent);
+                            }
+                        });
+                        mainMenuComposePropertyAnimator
+                                .scaleX(1)
+                                .scaleY(1)
+                                .start();
+                        mainMenuValueComposeAnimator.start();
+                    }
+                });
+                mainMenuComposePropertyAnimator
+                        .scaleX(0.95f)
+                        .scaleY(0.95f)
+                        .start();
+                mainMenuValueComposeAnimator.start();
+            }
+        });
+        mainMenuCompose.bringToFront();
+        EMailService.displayMessages(eMailMessagesLayout);
+    }
+
+    public void onBackPressed() {
+        boolean modeConfirmingDeletingOn=EMailService.getModeMainMenuConfirmingDeleting();
+        if (modeConfirmingDeletingOn)
+            EMailService.setModeMainMenuConfirmingDeletingOff();
+        else {
+            boolean modeDeletingOn = EMailService.getModeMainMenuDeleting();
+            if (modeDeletingOn)
+                EMailService.setModeMainMenuDeleting(false);
+            else
+                super.onBackPressed();
+        }
+    }
+}
