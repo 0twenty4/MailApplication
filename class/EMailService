@@ -16,6 +16,8 @@ import androidx.fragment.app.FragmentTransaction;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Base64;
+import android.util.TypedValue;
+import android.view.GestureDetector;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.Animation;
@@ -51,6 +53,7 @@ import javax.mail.Address;
 import javax.mail.Flags;
 import javax.mail.Folder;
 import javax.mail.Message;
+import javax.mail.MessagingException;
 import javax.mail.Multipart;
 import javax.mail.Part;
 import javax.mail.Session;
@@ -64,39 +67,18 @@ import javax.mail.util.ByteArrayDataSource;
 
 import java.io.InputStream;
 
-public class EMailService implements Animation.AnimationListener, ValueAnimator.AnimatorListener, ValueAnimator.AnimatorUpdateListener,
+public class EMailService extends GestureDetector.SimpleOnGestureListener implements Animation.AnimationListener, ValueAnimator.AnimatorListener, ValueAnimator.AnimatorUpdateListener,
                                     View.OnClickListener, View.OnLongClickListener, View.OnFocusChangeListener,
                                     TextWatcher,
                                     ViewGroup.OnHierarchyChangeListener {
     private static String currentUserEMailAddress;
     private static String currentUserPassword;
     private static AppCompatActivity activityCurrent;
-    private static FragmentManager activityCurrentFragmentManager;
     private static int activityCurrentFragmentLoadingLayoutId;
-    private static final Session session;
-    private static Transport transport;
-    private static Store store;
-    private static Folder folder;
-    private static List<Message> eMailMessagesAll;
     private static final ArrayList<EMailMessage> eMailMessagesLoadedCurrent = new ArrayList<>();
-    private static final ArrayList<EMailMessage> eMailMessagesDisplayed = new ArrayList<>();
-    private static int eMailMessagesLoadedAllAmount;
-    private static final int LOAD_AMOUNT = 20;
-    private static final int DISPLAY_AMOUNT = 15;
-    private static EMailMessage firstEMailMessageDisplayed;
-    private static Fragment fragmentLoadingCurrent;
-    private static Fragment loadMore;
+    private static int displayedEMailMessagesCount;
+    private static final Session session;
     private static ConfirmingDeletingMainMenu mainMenuConfirmingDeleting;
-    private static final String MULTIPART = "multipart/*";
-    private static final String TEXT_PLAIN = "text/plain";
-    private static final String TEXT_HTML = "text/html";
-    private static final String MESSAGE_RFC822 = "message/rfc822";
-    private static final String IMAGE_PNG = "image/png";
-    private static final String IMAGE_JPEG= "image/jpeg";
-    private static final String IMAGE="image";
-    private static final String HTTP="http://";
-    private static final String HTTPS="https://";
-    private static final String UNKNOWN_CONTENT_TYPE="unknown content type";
     private static boolean eMailMessageCurrentHasContentHtml;
     private static final ExecutorService executor=Executors.newSingleThreadExecutor();
     private static EMailMessage eMailMessageCurrent;
@@ -150,27 +132,68 @@ public class EMailService implements Animation.AnimationListener, ValueAnimator.
     public static void setCurrentActivity(AppCompatActivity activity, int viewGroup) {
         activityCurrent = activity;
         activityCurrentFragmentLoadingLayoutId = viewGroup;
-        activityCurrentFragmentManager=activity.getSupportFragmentManager();
     }
 
     public static void setModeMainMenuDeleting(boolean isOn) {
         modeMainMenuDeleting =isOn;
         final int viewVisibility;
-        if (isOn)
-            viewVisibility=VISIBLE;
+        final int background;
+        final float alphaTo;
+        final ImageView mainMenuDelete=activityCurrent.findViewById(R.id.main_menu_delete);
+        final ImageView mainMenuTick=activityCurrent.findViewById(R.id.main_menu_tick);
+        if (isOn) {
+            background=0;
+            viewVisibility = VISIBLE;
+            alphaTo=0;
+            mainMenuDelete.setVisibility(VISIBLE);
+            mainMenuDelete.animate()
+                    .alpha(1)
+                    .setDuration(100)
+                    .setListener(null)
+                    .start();
+            mainMenuTick.setVisibility(VISIBLE);
+            mainMenuTick.animate()
+                    .alpha(1)
+                    .setDuration(100)
+                    .setListener(null)
+                    .start();
+
+        }
         else {
+            final TypedValue backgroundOutValue=new TypedValue();
+            activityCurrent.getApplicationContext().getTheme().resolveAttribute(android.R.attr.selectableItemBackground, backgroundOutValue, true);
+            background=backgroundOutValue.resourceId;
             areEMailMessagesDisplayedTicked=false;
             viewVisibility = GONE;
+            alphaTo=1;
+            mainMenuDelete.animate()
+                    .alpha(0)
+                    .setDuration(100)
+                    .setListener(new EMailService() {
+                        public void onAnimationEnd(Animator animator) {
+                            mainMenuDelete.setVisibility(GONE);
+                        }
+                    })
+                    .start();
+            mainMenuTick.animate()
+                    .alpha(0)
+                    .setDuration(100)
+                    .setListener(new EMailService() {
+                        public void onAnimationEnd(Animator animator) {
+                            mainMenuTick.setVisibility(GONE);
+                        }
+                    })
+                    .start();
         }
-        for (EMailMessage eMailMessage:eMailMessagesDisplayed) {
-            ImageView eMailMessageDelete=eMailMessage.getView().findViewById(R.id.email_message_delete);
+        for (EMailMessage eMailMessage:getDisplayedEMailMessages()) {
+            final View eMailMessageView=eMailMessage.getView();
+            ImageView eMailMessageDelete=eMailMessageView.findViewById(R.id.email_message_delete);
             eMailMessageDelete.setVisibility(viewVisibility);
             if (!isOn && eMailMessage.ticked) {
                 eMailMessage.ticked = false;
                 eMailMessagesDisplayedTicked.remove(eMailMessage);
                 ImageView eMailMessageTick = eMailMessage.getView().findViewById(R.id.email_message_tick);
                 eMailMessageTick.setVisibility(GONE);
-                View eMailMessageView = eMailMessage.getView();
                 int white = activityCurrent.getColor(R.color.white);
                 int grey = activityCurrent.getColor(R.color.bright_grey);
                 ValueAnimator eMailMessageViewAnimator = ValueAnimator.ofArgb(grey, white).setDuration(300);
@@ -179,13 +202,20 @@ public class EMailService implements Animation.AnimationListener, ValueAnimator.
                         eMailMessageView.setBackgroundColor((int) animator.getAnimatedValue());
                     }
                 });
+                eMailMessageViewAnimator.addListener(new EMailService() {
+                    public void onAnimationEnd(Animator animator) {
+                        eMailMessageView.setBackgroundResource(background);
+                    }
+                });
                 eMailMessageViewAnimator.start();
-            }
+            } else
+                eMailMessageView.setBackgroundResource(background);
         }
-        ImageView mainMenuTick= activityCurrent.findViewById(R.id.main_menu_tick);
-        mainMenuTick.setVisibility(viewVisibility);
-        ImageView mainMenuDelete= activityCurrent.findViewById(R.id.main_menu_delete);
-        mainMenuDelete.setVisibility(viewVisibility);
+        ImageView mainMenuCompose=activityCurrent.findViewById(R.id.main_menu_compose);
+        mainMenuCompose.animate()
+                .alpha(alphaTo)
+                .setDuration(100)
+                .start();
     }
 
     public static boolean getModeMainMenuDeleting() {
@@ -215,7 +245,7 @@ public class EMailService implements Animation.AnimationListener, ValueAnimator.
         if (mainMenuConfirmingDeleting == null)
             mainMenuConfirmingDeleting = new ConfirmingDeletingMainMenu();
         int eMailMessagesDisplayedTickedAmount=eMailMessagesDisplayedTicked.size();
-        final FragmentTransaction currentActivityFragmentTransaction = activityCurrentFragmentManager.beginTransaction();
+        final FragmentTransaction currentActivityFragmentTransaction = activityCurrent.getSupportFragmentManager().beginTransaction();
         final View mainMenuClickLayout= activityCurrent.findViewById(R.id.main_menu_root_click_layout);
         final boolean viewsClickable;
         if (isOn) {
@@ -243,9 +273,7 @@ public class EMailService implements Animation.AnimationListener, ValueAnimator.
                     .commit();
             mainMenuClickLayout.setVisibility(GONE);
         }
-        int eMailMessagesDisplayedAmount = eMailMessagesDisplayed.size();
-        for (int index = 0; index < eMailMessagesDisplayedAmount; index++) {
-            EMailMessage eMailMessage = eMailMessagesDisplayed.get(index);
+        for (EMailMessage eMailMessage:getDisplayedEMailMessages()) {
             eMailMessage.setClickable(viewsClickable);
         }
         ViewGroup mainMenuTop= activityCurrent.findViewById(R.id.email_message_open_top);
@@ -267,7 +295,7 @@ public class EMailService implements Animation.AnimationListener, ValueAnimator.
         final ValueAnimator eMailMessageViewAnimator;
         if (ticked) {
             ArrayList<EMailMessage> eMailMessagesDisplayedNotTicked = new ArrayList<>();
-            for (EMailMessage eMailMessage : eMailMessagesDisplayed) {
+            for (EMailMessage eMailMessage : getDisplayedEMailMessages()) {
                 if (!eMailMessage.ticked)
                     eMailMessagesDisplayedNotTicked.add(eMailMessage);
             }
@@ -286,11 +314,11 @@ public class EMailService implements Animation.AnimationListener, ValueAnimator.
             }
             } else {
             eMailMessageViewAnimator=ValueAnimator.ofArgb(grey, white).setDuration(300);
-            for (EMailMessage eMailMessage:eMailMessagesDisplayed) {
-                eMailMessage.ticked=false;
+            for (EMailMessage eMailMessage:getDisplayedEMailMessages()) {
+                eMailMessage.ticked = false;
                 removeEMailMessagesDisplayedTicked(eMailMessage);
-                View eMailMessageView=eMailMessage.getView();
-                ImageView eMailMessageTick=eMailMessageView.findViewById(R.id.email_message_tick);
+                final View eMailMessageView = eMailMessage.getView();
+                ImageView eMailMessageTick = eMailMessageView.findViewById(R.id.email_message_tick);
                 eMailMessageTick.setVisibility(GONE);
                 eMailMessageViewAnimator.addUpdateListener(new EMailService() {
                     public void onAnimationUpdate(ValueAnimator animator) {
@@ -300,6 +328,16 @@ public class EMailService implements Animation.AnimationListener, ValueAnimator.
             }
         }
         eMailMessageViewAnimator.start();
+    }
+
+    private static ArrayList<EMailMessage> getDisplayedEMailMessages() {
+        FragmentManager activityCurrentFragmentManager=activityCurrent.getSupportFragmentManager();
+        final ArrayList<EMailMessage> displayedEMailMessages=new ArrayList<>();
+        for (int index=0; index<displayedEMailMessagesCount; index++) {
+            EMailMessage displayedEMailMessage =(EMailMessage) activityCurrentFragmentManager.findFragmentByTag(String.valueOf(index));
+            displayedEMailMessages.add(displayedEMailMessage);
+        }
+        return displayedEMailMessages;
     }
 
     public static boolean getAreEMailMessagesDisplayedTicked() {
@@ -331,36 +369,26 @@ public class EMailService implements Animation.AnimationListener, ValueAnimator.
     public static void delete(EMailMessage onlyOneEMailMessageToDelete, ArrayList<EMailMessage> eMailMessagesToDelete) {
         setModeMainMenuConfirmingDeletingOff();
         setModeMainMenuDeleting(false);
-        fragmentLoadingCurrent = new LoadingProgressBarCircle();
-        activityCurrentFragmentManager.beginTransaction()
+        Fragment fragmentLoadingCurrent = new LoadingProgressBarCircle();
+        activityCurrent.getSupportFragmentManager().beginTransaction()
                 .add(activityCurrentFragmentLoadingLayoutId, fragmentLoadingCurrent)
                 .commit();
         removeEMailMessagesLayoutViews();
-        removeEMailMessagesDisplayedToEMailMessagesLoaded();
         executor.execute((Runnable) () -> {
             try {
+                Map.Entry<Folder, List<Message>> folderAndMessages=getFolderAndMessages();
                 if (onlyOneEMailMessageToDelete!=null) {
                     Message message = onlyOneEMailMessageToDelete.message;
                     message.setFlag(Flags.Flag.DELETED, true);
-                    eMailMessagesLoadedCurrent.remove(onlyOneEMailMessageToDelete);
-                    eMailMessagesLoadedAllAmount--;
                 } else {
                     for (EMailMessage eMailMessage : eMailMessagesToDelete) {
                         Message message = eMailMessage.message;
                         message.setFlag(Flags.Flag.DELETED, true);
-                        eMailMessagesLoadedCurrent.remove(eMailMessage);
-                        eMailMessagesLoadedAllAmount--;
                     }
                 }
+                Folder folder=folderAndMessages.getKey();
                 folder.close(true);
-                folder.open(Folder.READ_WRITE);
-                Message[] messagesAll=folder.getMessages();
-                eMailMessagesAll=Arrays.asList(messagesAll);
-                Collections.reverse(eMailMessagesAll);
-                int messageCount=eMailMessagesLoadedCurrent.size();
-                loadMessages(messageCount);
-                System.out.println(messageCount);
-                System.out.println(eMailMessagesLoadedCurrent.size());
+                loadMessages(0);
             } catch (Exception e) {
             }
             activityCurrent.runOnUiThread((Runnable) () -> {
@@ -370,15 +398,15 @@ public class EMailService implements Animation.AnimationListener, ValueAnimator.
                 if (canDisplay(eMailMessagesLayout)) {
                     if (noMessagesVisibility == VISIBLE)
                         noMessages.setVisibility(GONE);
-                    loadMore = new LoadMore();
-                    activityCurrentFragmentManager.beginTransaction()
+                    LoadMore loadMore = new LoadMore();
+                    activityCurrent.getSupportFragmentManager().beginTransaction()
                             .add(eMailMessagesLayout, loadMore)
                             .commit();
                 } else {
                     if (noMessages.getVisibility() == GONE)
                         noMessages.setVisibility(VISIBLE);
                 }
-                activityCurrentFragmentManager.beginTransaction()
+                activityCurrent.getSupportFragmentManager().beginTransaction()
                         .remove(fragmentLoadingCurrent)
                         .commit();
             });
@@ -386,76 +414,78 @@ public class EMailService implements Animation.AnimationListener, ValueAnimator.
     }
 
     public static void sendEMailMessage(ArrayList<LayoutPart> eMailMessageTo, TextView eMailMessageSubject, TextView eMailMessageText, ArrayList<EMailMessageComposing.Attachment> attachments) {
-        View activityCurrentFragmentLoadingLayout=activityCurrent.findViewById(R.id.email_message_composing_fragment_loading_layout);
+        View activityCurrentFragmentLoadingLayout=activityCurrent.findViewById(activityCurrentFragmentLoadingLayoutId);
         activityCurrentFragmentLoadingLayout.setVisibility(VISIBLE);
-        fragmentLoadingCurrent=new EMailMessageSending();
-        activityCurrentFragmentManager.beginTransaction()
-                .runOnCommit((Runnable) () -> {
-                    executor.execute((Runnable) () -> {
-                        try {
-                            MimeMessage eMailMessage = new MimeMessage(session);
-                            eMailMessage.setFrom(currentUserEMailAddress);
-                            eMailMessage.setSubject(eMailMessageSubject.getText().toString());
-                            MimeMultipart eMailMessageContent=new MimeMultipart();
-                            MimeBodyPart eMailMessagePartText=new MimeBodyPart();
-                            eMailMessagePartText.setContent(eMailMessageText.getText().toString(), TEXT_HTML);
-                            eMailMessageContent.addBodyPart(eMailMessagePartText);
-                            if (!attachments.isEmpty()) {
-                                final ContentResolver contentResolver=activityCurrent.getContentResolver();
-                                for (EMailMessageComposing.Attachment attachment:attachments) {
-                                    InputStream contentStream = contentResolver.openInputStream(attachment.content);
-                                    ArrayList<Byte> contentBytesList = new ArrayList<>();
-                                    do {
-                                        contentBytesList.add((byte) contentStream.read());
-                                    } while (contentStream.available() > 0);
-                                    contentStream.close();
-                                    byte[] contentBytesArray = new byte[contentBytesList.size()];
-                                    for (int index = 0; index < contentBytesArray.length; index++)
-                                        contentBytesArray[index] = contentBytesList.get(index);
-                                    MimeBodyPart eMailMessagePartAttachment = new MimeBodyPart();
-                                    eMailMessagePartAttachment.setDataHandler(new DataHandler(new ByteArrayDataSource(contentBytesArray, attachment.contentType)));
-                                    eMailMessagePartAttachment.setFileName(attachment.fileName.getText().toString());
-                                    eMailMessageContent.addBodyPart(eMailMessagePartAttachment);
-                                }
-                            }
-                            final String firstEMailAddress=eMailMessageTo.get(0).eMailAddress;
-                            if (eMailMessageTo.size()==1) {
-                                eMailMessage.setRecipients(Message.RecipientType.TO, firstEMailAddress);
-                            } else {
-                                StringBuilder eMailAddresses = new StringBuilder();
-                                eMailAddresses.append(firstEMailAddress);
-                                if (eMailMessageTo.size() > 1) {
-                                    final String comma = ",";
-                                    for (int index = 1; index < eMailMessageTo.size(); index++) {
-                                        String eMailAddress = eMailMessageTo.get(index).eMailAddress;
-                                        eMailAddresses.append(comma).append(eMailAddress);
-                                    }
-                                }
-                                eMailMessage.setRecipients(Message.RecipientType.TO, eMailAddresses.toString());
-                            }
-                            eMailMessage.setContent(eMailMessageContent);
-                            eMailMessage.saveChanges();
-                            Transport.send(eMailMessage, currentUserEMailAddress, currentUserPassword);
-                            activityCurrent.runOnUiThread((Runnable) () -> {
-                                activityCurrent.onBackPressed();
-                            });
-                        } catch (Exception e) {
-                            activityCurrent.runOnUiThread((Runnable) () -> {
-                                activityCurrentFragmentManager.beginTransaction()
-                                        .runOnCommit((Runnable) () -> {
-                                            activityCurrentFragmentLoadingLayout.postDelayed((Runnable) () -> {
-                                                activityCurrentFragmentLoadingLayout.setVisibility(GONE);
-                                            }, 100);
-                                        })
-                                        .remove(fragmentLoadingCurrent)
-                                        .commit();
-                            });
-                        }
-                    });
-                })
-                .setCustomAnimations(R.anim.slide_from_right_to_middle, R.anim.slide_from_middle_to_right)
+        Fragment fragmentLoadingCurrent=new EMailMessageComposing.EMailMessageSending();
+        activityCurrent.getSupportFragmentManager().beginTransaction()
+                .setCustomAnimations(R.anim.slide_from_right_to_middle, 0)
                 .add(activityCurrentFragmentLoadingLayoutId, fragmentLoadingCurrent)
-                .commit();
+                .commitNow();
+        activityCurrentFragmentLoadingLayout.postDelayed((Runnable) () -> {
+            executor.execute((Runnable) () -> {
+                try {
+                    MimeMessage eMailMessage = new MimeMessage(session);
+                    eMailMessage.setFrom(currentUserEMailAddress);
+                    eMailMessage.setSubject(eMailMessageSubject.getText().toString());
+                    MimeMultipart eMailMessageContent = new MimeMultipart();
+                    MimeBodyPart eMailMessagePartText = new MimeBodyPart();
+                    eMailMessagePartText.setContent(eMailMessageText.getText().toString(), "text/html");
+                    eMailMessageContent.addBodyPart(eMailMessagePartText);
+                    if (attachments!=null) {
+                        final ContentResolver contentResolver = activityCurrent.getContentResolver();
+                        for (EMailMessageComposing.Attachment attachment : attachments) {
+                            InputStream contentStream = contentResolver.openInputStream(attachment.content);
+                            ArrayList<Byte> contentBytesList = new ArrayList<>();
+                            do {
+                                contentBytesList.add((byte) contentStream.read());
+                            } while (contentStream.available() > 0);
+                            contentStream.close();
+                            byte[] contentBytesArray = new byte[contentBytesList.size()];
+                            for (int index = 0; index < contentBytesArray.length; index++)
+                                contentBytesArray[index] = contentBytesList.get(index);
+                            MimeBodyPart eMailMessagePartAttachment = new MimeBodyPart();
+                            eMailMessagePartAttachment.setDataHandler(new DataHandler(new ByteArrayDataSource(contentBytesArray, attachment.contentType)));
+                            eMailMessagePartAttachment.setFileName(attachment.fileName.getText().toString());
+                            eMailMessageContent.addBodyPart(eMailMessagePartAttachment);
+                        }
+                    }
+                    final String firstEMailAddress = eMailMessageTo.get(0).eMailAddress;
+                    if (eMailMessageTo.size() == 1) {
+                        eMailMessage.setRecipients(Message.RecipientType.TO, firstEMailAddress);
+                    } else {
+                        StringBuilder eMailAddresses = new StringBuilder();
+                        eMailAddresses.append(firstEMailAddress);
+                        if (eMailMessageTo.size() > 1) {
+                            final String comma = ",";
+                            for (int index = 1; index < eMailMessageTo.size(); index++) {
+                                String eMailAddress = eMailMessageTo.get(index).eMailAddress;
+                                eMailAddresses.append(comma).append(eMailAddress);
+                            }
+                        }
+                        eMailMessage.setRecipients(Message.RecipientType.TO, eMailAddresses.toString());
+                    }
+                    eMailMessage.setContent(eMailMessageContent);
+                    eMailMessage.saveChanges();
+                    Transport.send(eMailMessage, currentUserEMailAddress, currentUserPassword);
+                    activityCurrent.runOnUiThread((Runnable) () -> {
+                        activityCurrent.onBackPressed();
+                    });
+                } catch (Exception e) {
+                    activityCurrent.runOnUiThread((Runnable) () -> {
+                        activityCurrent.getSupportFragmentManager().beginTransaction()
+                                .setCustomAnimations(0, R.anim.slide_from_middle_to_right)
+                                .remove(fragmentLoadingCurrent)
+                                .commitNow();
+                        StackTraceElement[] trace=e.getStackTrace();
+                        for (StackTraceElement element:trace)
+                            System.out.println(element);
+                        activityCurrentFragmentLoadingLayout.postDelayed((Runnable) () -> {
+                            activityCurrentFragmentLoadingLayout.setVisibility(GONE);
+                        }, 300);
+                    });
+                }
+            });
+        }, 300);
     }
 
     public static void loadUser(String login, String password) {
@@ -523,22 +553,21 @@ public class EMailService implements Animation.AnimationListener, ValueAnimator.
         executor.execute((Runnable) () -> {
             try {
                 activityCurrent.runOnUiThread((Runnable) () -> {
-                            fragmentLoadingCurrent = new Connecting();
-                            activityCurrentFragmentManager.beginTransaction()
+                            Fragment fragmentLoadingCurrent = new Connecting();
+                    activityCurrent.getSupportFragmentManager().beginTransaction()
                                     .setCustomAnimations(R.anim.slide_from_right_to_middle, 0)
-                                    .add(activityCurrentFragmentLoadingLayoutId, fragmentLoadingCurrent)
+                                    .add(activityCurrentFragmentLoadingLayoutId, fragmentLoadingCurrent, "connecting")
                                     .commit();
                         });
-                transport = session.getTransport();
+                Transport transport = session.getTransport();
                 transport.connect(currentUserEMailAddress, currentUserPassword);
                 activityCurrent.runOnUiThread((Runnable) () -> {
-                    fragmentLoadingCurrent = new LoadingEMailMessages();
-                    activityCurrentFragmentManager.beginTransaction()
-                            .replace(activityCurrentFragmentLoadingLayoutId, fragmentLoadingCurrent)
+                    Fragment fragmentLoadingCurrent = new LoadingEMailMessages();
+                    activityCurrent.getSupportFragmentManager().beginTransaction()
+                            .replace(activityCurrentFragmentLoadingLayoutId, fragmentLoadingCurrent, "loadingMessages")
                             .commit();
 
                 });
-                getMessages();
                 loadMessages(0);
                 activityCurrent.runOnUiThread((Runnable) () -> {
                     Intent intent = new Intent(activityCurrent, MenuMain.class);
@@ -550,75 +579,88 @@ public class EMailService implements Animation.AnimationListener, ValueAnimator.
                 activityCurrent.runOnUiThread((Runnable) () -> {
                     TextView accountNotExist = activityCurrent.findViewById(R.id.account_not_exist);
                     accountNotExist.setVisibility(VISIBLE);
+                    FragmentManager activityCurrentFragmentManager=activityCurrent.getSupportFragmentManager();
                     activityCurrentFragmentManager.beginTransaction()
-                            .setCustomAnimations(0, R.anim.slide_from_middle_to_right)
-                            .remove(fragmentLoadingCurrent)
-                            .commit();
+                          .setCustomAnimations(0, R.anim.slide_from_middle_to_right)
+                          .remove(activityCurrentFragmentManager.findFragmentByTag("connecting"))
+                          .commit();
                 });
             }
         });
     }
 
-    private static void getMessages() {
+    private static Map.Entry<Folder, List<Message>> getFolderAndMessages() {
         try {
-            store = session.getStore();
+            Store store = session.getStore();
             store.connect(currentUserEMailAddress, currentUserPassword);
-            folder = store.getFolder("inbox");
-            folder.open(Folder.READ_WRITE);
-            Message[] messagesAll = folder.getMessages();
-            eMailMessagesAll = Arrays.asList(messagesAll);
-            Collections.reverse(eMailMessagesAll);
+            Folder folder = store.getFolder("inbox");
+            try {
+                folder.open(Folder.READ_WRITE); // we need "try-catch" as folder may have been already opened
+            } catch (MessagingException ignored) {}
+            Message[] messages = folder.getMessages();
+            List<Message> eMailMessages = Arrays.asList(messages);
+            Collections.reverse(eMailMessages);
+            HashMap<Folder, List<Message>> folderAndMessages = new HashMap<>();
+            folderAndMessages.put(folder, eMailMessages);
+            return folderAndMessages.entrySet().iterator().next();
         } catch (Exception e) {
+            return null;
         }
     }
 
     private static void loadMessages(int messageCount) {
         try {
-            for (int messageToLoadIndex = eMailMessagesLoadedAllAmount; messageCount < LOAD_AMOUNT; messageCount++, messageToLoadIndex++) {
-                Message receivedMessage = eMailMessagesAll.get(messageToLoadIndex);
-                EMailMessage eMailMessage=(EMailMessage) loadMessage(receivedMessage);
+            Map.Entry<Folder, List<Message>> folderAndMessages= getFolderAndMessages();
+            List<Message> messages=folderAndMessages.getValue();
+            int messageToLoadIndex=displayedEMailMessagesCount;
+            for (; messageCount < 20; messageCount++, messageToLoadIndex++) {
+                Message receivedMessage = messages.get(messageToLoadIndex);
+                EMailMessage eMailMessage= loadMessage(receivedMessage);
                 eMailMessagesLoadedCurrent.add(eMailMessage);
-                eMailMessagesLoadedAllAmount++;
             }
-            eMailMessagesLoadedAllAmount--;
         } catch (Exception e) {
-            System.out.println(e.getClass().getName());
+            StackTraceElement[] trace=e.getStackTrace();
+            for (StackTraceElement element:trace) System.out.println(element);
         }
     }
 
     public static void displayMessages(int eMailMessagesLayout) {
         if (!hasDisplayedMessages) {
-            fragmentLoadingCurrent = new LoadingProgressBarCircle();
-            activityCurrentFragmentManager.beginTransaction()
+            LoadingProgressBarCircle fragmentLoadingCurrent = new LoadingProgressBarCircle();
+            activityCurrent.getSupportFragmentManager().beginTransaction()
                     .add(activityCurrentFragmentLoadingLayoutId, fragmentLoadingCurrent)
                     .commit();
-            FragmentTransaction currentActivityFragmentTransaction = activityCurrentFragmentManager.beginTransaction();
+            FragmentTransaction currentActivityFragmentTransaction = activityCurrent.getSupportFragmentManager().beginTransaction();
             if (canDisplay(eMailMessagesLayout)) {
-                loadMore = new LoadMore();
-                currentActivityFragmentTransaction.add(eMailMessagesLayout, loadMore);
+                LoadMore loadMore = new LoadMore();
+                currentActivityFragmentTransaction.add(eMailMessagesLayout, loadMore, "load more");
             } else {
                 TextView noMessages = activityCurrent.findViewById(R.id.no_messages);
                 noMessages.setVisibility(VISIBLE);
             }
             hasDisplayedMessages = true;
             currentActivityFragmentTransaction.remove(fragmentLoadingCurrent).commit();
-        } else
+        } else {
             returnDisplayedMessages(eMailMessagesLayout);
+        }
     }
 
     public static void displayMoreMessages(int eMailMessagesLayout) {
-        System.out.println(eMailMessagesLoadedCurrent.size());
         executor.execute((Runnable) () -> {
             if (eMailMessagesLoadedCurrent.isEmpty())
                 loadMessages(0);
             activityCurrent.runOnUiThread((Runnable) () -> {
-                FragmentTransaction currentActivityFragmentTransaction = activityCurrentFragmentManager.beginTransaction();
+                FragmentManager activityCurrentFragmentManager=activityCurrent.getSupportFragmentManager();
+                FragmentTransaction activityCurrentFragmentTransaction=activityCurrentFragmentManager.beginTransaction();
                 if (canDisplay(eMailMessagesLayout)) {
-                    currentActivityFragmentTransaction.remove(loadMore);
-                    loadMore = new LoadMore();
-                    currentActivityFragmentTransaction.add(eMailMessagesLayout, loadMore).commit();
+                    activityCurrentFragmentTransaction
+                            .remove(activityCurrentFragmentManager.findFragmentByTag("load more"))
+                            .add(eMailMessagesLayout, new LoadMore(), "load more")
+                            .commit();
                 } else
-                    currentActivityFragmentTransaction.remove(loadMore).commit();
+                    activityCurrentFragmentTransaction
+                        .remove(activityCurrentFragmentManager.findFragmentByTag("load more"))
+                        .commit();
             });
         });
     }
@@ -628,134 +670,80 @@ public class EMailService implements Animation.AnimationListener, ValueAnimator.
     }
 
     private static boolean canDisplay(int eMailMessagesLayout) {
-        FragmentTransaction currentActivityFragmentTransaction = activityCurrentFragmentManager.beginTransaction();
+        FragmentTransaction currentActivityFragmentTransaction = activityCurrent.getSupportFragmentManager().beginTransaction();
         Iterator<EMailMessage> eMailMessagesLoadedIterator = eMailMessagesLoadedCurrent.iterator();
         int messageCount = 0;
-        while (eMailMessagesLoadedIterator.hasNext() && messageCount < DISPLAY_AMOUNT) {
+        while (eMailMessagesLoadedIterator.hasNext() && messageCount < 20) {
             EMailMessage eMailMessage = eMailMessagesLoadedIterator.next();
-            currentActivityFragmentTransaction.add(eMailMessagesLayout, eMailMessage);
-            eMailMessagesDisplayed.add(eMailMessage);
+            currentActivityFragmentTransaction.add(eMailMessagesLayout, eMailMessage, String.valueOf(displayedEMailMessagesCount));
             eMailMessagesLoadedIterator.remove();
+            displayedEMailMessagesCount++;
             messageCount++;
         }
         currentActivityFragmentTransaction.commit();
-        firstEMailMessageDisplayed = eMailMessagesDisplayed.get(0);
         if (messageCount > 0)
             return true;
         else
             return false;
     }
 
-    public static void returnDisplayedMessages(int eMailMessagesLayout) {
-        Iterator<EMailMessage> eMailMessagesDisplayedIterator = eMailMessagesDisplayed.iterator();
-        FragmentTransaction currentActivityFragmentTransaction = activityCurrentFragmentManager.beginTransaction();
-        while (eMailMessagesDisplayedIterator.hasNext()) {
-            EMailMessage eMailMessage = eMailMessagesDisplayedIterator.next();
-            currentActivityFragmentTransaction.add(eMailMessagesLayout, eMailMessage);
-        }
-        loadMore = new LoadMore();
-        currentActivityFragmentTransaction.add(eMailMessagesLayout, loadMore).commit();
-    }
-
     public static boolean hasDisplayedMessages() {
         return hasDisplayedMessages;
     }
 
-    private static void removeEMailMessagesDisplayedToEMailMessagesLoaded() {
-        Iterator<EMailMessage> eMailMessagesDisplayedIterator = eMailMessagesDisplayed.iterator();
-        for (int messageIndex = 0; eMailMessagesDisplayedIterator.hasNext(); messageIndex++) {
-            EMailMessage eMailMessage = eMailMessagesDisplayedIterator.next();
-            eMailMessagesDisplayedIterator.remove();
-            eMailMessagesLoadedCurrent.add(messageIndex, eMailMessage);
-        }
-    }
-
-    private static void loadNewMessages() {
-        removeEMailMessagesDisplayedToEMailMessagesLoaded();
-        try {
-            Date firstEMailMessageDisplayedSentDate=firstEMailMessageDisplayed.message.getSentDate();
-            for (int messageIndex = 0; true; messageIndex++) {
-                Message receivedMessage = eMailMessagesAll.get(messageIndex);
-                Date receivedMessageSentDate=receivedMessage.getSentDate();
-                if (receivedMessageSentDate.after(firstEMailMessageDisplayedSentDate)) {
-                    EMailMessage eMailMessage =(EMailMessage) loadMessage(receivedMessage);
-                    eMailMessagesLoadedCurrent.add(messageIndex, eMailMessage);
-                    eMailMessagesLoadedAllAmount++;
-                } else {
-                    break;
-                }
-            }
-        } catch (Exception e) {
-
-        }
-    }
-
-    private static boolean hasNewMessages() {
-        try {
-            Message[] messagesAll = folder.getMessages();
-            int messagesAllCount=messagesAll.length;
-            int eMailMessagesAllCount=eMailMessagesAll.size();
-            if (messagesAllCount>eMailMessagesAllCount) {
-                eMailMessagesAll=Arrays.asList(messagesAll);
-                Collections.reverse(eMailMessagesAll);
-                return true;
-            } else
-                return false;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
     private static void removeEMailMessagesLayoutViews() {
-        FragmentTransaction currentActivityFragmentTransaction = activityCurrentFragmentManager.beginTransaction();
-        for (EMailMessage eMailMessage : eMailMessagesDisplayed) {
+        FragmentManager activityCurrentFragmentManager=activityCurrent.getSupportFragmentManager();
+        FragmentTransaction currentActivityFragmentTransaction = activityCurrent.getSupportFragmentManager().beginTransaction();
+        for (EMailMessage eMailMessage : getDisplayedEMailMessages()) {
             currentActivityFragmentTransaction.remove(eMailMessage);
         }
-        currentActivityFragmentTransaction.remove(loadMore).commit();
+        displayedEMailMessagesCount=0;
+        currentActivityFragmentTransaction.remove(activityCurrentFragmentManager.findFragmentByTag("load more")).commit();
     }
 
     public static void refresh(int eMailMessagesLayout) {
         View mainMenuLoadingLayout = activityCurrent.findViewById(activityCurrentFragmentLoadingLayoutId);
         mainMenuLoadingLayout.bringToFront();
-        fragmentLoadingCurrent = new LoadingProgressBarCircle();
-        activityCurrentFragmentManager.beginTransaction()
+        Fragment fragmentLoadingCurrent = new LoadingProgressBarCircle();
+        activityCurrent.getSupportFragmentManager().beginTransaction()
                 .add(activityCurrentFragmentLoadingLayoutId, fragmentLoadingCurrent)
                 .commit();
         if (modeMainMenuDeleting)
             setModeMainMenuDeleting(false);
+        removeEMailMessagesLayoutViews();
         executor.execute((Runnable) () -> {
-        if (hasNewMessages()) {
+            loadMessages(0);
             activityCurrent.runOnUiThread((Runnable) () -> {
-                removeEMailMessagesLayoutViews();
-                executor.execute((Runnable) () -> {
-                    loadNewMessages();
-                    activityCurrent.runOnUiThread((Runnable) () -> {
-                        display(eMailMessagesLayout);
-                        loadMore = new LoadMore();
-                        activityCurrentFragmentManager.beginTransaction()
-                                .add(eMailMessagesLayout, loadMore)
-                                .commit();
-                    });
-                });
-            });
-        }
-            activityCurrent.runOnUiThread((Runnable) () -> {
-                activityCurrentFragmentManager.beginTransaction()
+                display(eMailMessagesLayout);
+                LoadMore loadMore = new LoadMore();
+                activityCurrent.getSupportFragmentManager().beginTransaction()
+                        .add(eMailMessagesLayout, loadMore)
                         .remove(fragmentLoadingCurrent)
                         .commit();
-                Fragment currentActivityShowMoreFragment = activityCurrentFragmentManager.findFragmentByTag("main menu show more");
-                TextView refresh = currentActivityShowMoreFragment.getView().findViewById(R.id.main_menu_show_more_refresh);
+                TextView refresh = activityCurrent.getSupportFragmentManager().findFragmentByTag("main menu show more")
+                        .getView()
+                        .findViewById(R.id.main_menu_show_more_refresh);
                 refresh.setClickable(true);
             });
         });
     }
 
+    public static void returnDisplayedMessages(int eMailMessagesLayoutId) {
+        FragmentManager activityCurrentFragmentManager=activityCurrent.getSupportFragmentManager();
+        FragmentTransaction activityCurrentFragmentTransaction=activityCurrentFragmentManager.beginTransaction();
+        for (EMailMessage eMailMessage:eMailMessagesLoadedCurrent) {
+            activityCurrentFragmentTransaction.add(eMailMessagesLayoutId, eMailMessage, String.valueOf(displayedEMailMessagesCount));
+            displayedEMailMessagesCount++;
+        }
+        activityCurrentFragmentTransaction.add(eMailMessagesLayoutId, new LoadMore(), "load more").commit();
+        System.out.println(eMailMessagesLoadedCurrent.size());
+        eMailMessagesLoadedCurrent.clear();
+    }
 
-    private static Fragment loadMessage(Message message) {
+
+    private static EMailMessage loadMessage(Message message) {
         try {
-            System.out.println(1);
             Address[] messageFromAddresses = message.getFrom();
-            System.out.println(2);
             int fromAddressesAmount = messageFromAddresses.length;
             String[] from = new String[fromAddressesAmount];
             for (int fromAddressCount = 0; fromAddressCount < messageFromAddresses.length; fromAddressCount++) {
@@ -763,19 +751,16 @@ public class EMailService implements Animation.AnimationListener, ValueAnimator.
             }
             String subject = message.getSubject();
             String sentDate = formatSentDate(message.getSentDate());
-            Fragment eMailMessage=new EMailMessage(message, from, subject, sentDate);
+            EMailMessage eMailMessage=new EMailMessage(message, from, subject, sentDate);
             return eMailMessage;
         } catch (Exception e) {
-            StackTraceElement[] trace=e.getStackTrace();
-            for (StackTraceElement element:trace) System.out.println(element);
-            System.out.println(e.getClass().getName());
             return null;
         }
     }
 
     public static void loadEMailMessageContent() {
-        fragmentLoadingCurrent = new LoadingProgressBarCircle();
-        activityCurrentFragmentManager.beginTransaction()
+        Fragment fragmentLoadingCurrent = new LoadingProgressBarCircle();
+        activityCurrent.getSupportFragmentManager().beginTransaction()
                 .add(activityCurrentFragmentLoadingLayoutId, fragmentLoadingCurrent)
                 .commit();
         executor.execute(new Runnable() {
@@ -783,7 +768,7 @@ public class EMailService implements Animation.AnimationListener, ValueAnimator.
             public void run() {
                 try {
                 Part eMailMessageContent = eMailMessageCurrent.message;
-                if (eMailMessageContent.isMimeType(MULTIPART)) {
+                if (eMailMessageContent.isMimeType("multipart/*")) {
                     System.out.println(eMailMessageContent.getContentType());
                     Multipart eMailMessageContentMultipart=(Multipart) eMailMessageContent.getContent();
                     int eMailMessageContentPartAmount=eMailMessageContentMultipart.getCount();
@@ -803,14 +788,14 @@ public class EMailService implements Animation.AnimationListener, ValueAnimator.
                         Map.Entry<String,Object> contentTypeAndContent=eMailMessageContentTypeAndContentIterator.next();
                         String contentType=contentTypeAndContent.getKey();
                         Object content=contentTypeAndContent.getValue();
-                        if (contentType.equals(TEXT_PLAIN) && !eMailMessageCurrentHasContentHtml) {
+                        if (contentType.equals("text/plain") && !eMailMessageCurrentHasContentHtml) {
                             TextView contentText=new TextView(activityCurrent);
                             contentText.setText((String) content);
                             contentText.setTextSize(20);
                             int black= activityCurrent.getColor(R.color.black);
                             contentText.setTextColor(black);
                             currentEMailMessageContentLayout.addView(contentText);
-                        } else if (contentType.equals(TEXT_HTML)) {
+                        } else if (contentType.equals("text/html")) {
                             WebView contentWeb=new WebView(activityCurrent);
                             contentWeb.setWebViewClient(new WebViewClient() {
 
@@ -829,8 +814,8 @@ public class EMailService implements Animation.AnimationListener, ValueAnimator.
                                 public WebResourceResponse shouldInterceptRequest(WebView webView, WebResourceRequest request) {
                                     try {
                                         String currentUrlString = request.getUrl().toString();
-                                        if (currentUrlString.startsWith(HTTP)) {
-                                            String correctUrlString = currentUrlString.replace(HTTP, HTTPS);
+                                        if (currentUrlString.startsWith("http")) {
+                                            String correctUrlString = currentUrlString.replace("http", "https");
                                             URL correctUrl = new URL(correctUrlString);
                                             URLConnection correctUrlConnection = correctUrl.openConnection();
                                             String correctUrlContentType = correctUrlConnection.getContentType();
@@ -849,13 +834,13 @@ public class EMailService implements Animation.AnimationListener, ValueAnimator.
                             });
                             WebSettings contentWebSettings=contentWeb.getSettings();
                             contentWebSettings.setJavaScriptEnabled(true);
-                            contentWeb.loadData((String) content, TEXT_HTML, "base64");
+                            contentWeb.loadData((String) content, "text/html", "base64");
                             currentEMailMessageContentLayout.addView(contentWeb);
-                        } else if (contentType.equals(IMAGE)) {
+                        } else if (contentType.equals("image/*")) {
                             ImageView contentImage = new ImageView(activityCurrent);
                             contentImage.setImageBitmap((Bitmap) content);
                             currentEMailMessageContentLayout.addView(contentImage);
-                        } else if (contentType.equals(UNKNOWN_CONTENT_TYPE)) {
+                        } else if (contentType.equals("unknown")) {
                             TextView unknownContentType=new TextView(activityCurrent);
                             unknownContentType.setText(R.string.unknown_content_type);
                             unknownContentType.setTextSize(20);
@@ -863,7 +848,7 @@ public class EMailService implements Animation.AnimationListener, ValueAnimator.
                             unknownContentType.setTextColor(blue);
                             currentEMailMessageContentLayout.addView(unknownContentType);
                         }
-                        activityCurrentFragmentManager.beginTransaction()
+                        activityCurrent.getSupportFragmentManager().beginTransaction()
                                 .remove(fragmentLoadingCurrent)
                                 .commit();
                     }
@@ -876,25 +861,25 @@ public class EMailService implements Animation.AnimationListener, ValueAnimator.
     }
 
     private static HashMap<String, Object> loadEMailMessageContent(Part eMailMessageContentPart) throws Exception {
-        if (eMailMessageContentPart.isMimeType(TEXT_PLAIN)) {
+        if (eMailMessageContentPart.isMimeType("text/plain")) {
             HashMap<String, Object> partContentTypeAndContent = new HashMap<>();
             Object content = eMailMessageContentPart.getContent();
-            partContentTypeAndContent.put(TEXT_PLAIN, content);
+            partContentTypeAndContent.put("text/plain", content);
             return partContentTypeAndContent;
-        } else if (eMailMessageContentPart.isMimeType(TEXT_HTML)) {
+        } else if (eMailMessageContentPart.isMimeType("text/html")) {
             HashMap<String, Object> partContentTypeAndContent = new HashMap<>();
             String htmlString = (String) eMailMessageContentPart.getContent();
             Object content = Base64.encodeToString(htmlString.getBytes(), Base64.DEFAULT);
-            partContentTypeAndContent.put(TEXT_HTML, content);
+            partContentTypeAndContent.put("text/html", content);
             eMailMessageCurrentHasContentHtml =true;
             return partContentTypeAndContent;
-        } else if (eMailMessageContentPart.isMimeType(IMAGE_PNG) || eMailMessageContentPart.isMimeType(IMAGE_JPEG)) {
+        } else if (eMailMessageContentPart.isMimeType("image/*")) {
             HashMap<String, Object> partContentTypeAndContent = new HashMap<>();
             InputStream contentStream = eMailMessageContentPart.getInputStream();
             Object content = BitmapFactory.decodeStream(new BufferedInputStream(contentStream));
-            partContentTypeAndContent.put(IMAGE, content);
+            partContentTypeAndContent.put("image/*", content);
             return partContentTypeAndContent;
-        } else if (eMailMessageContentPart.isMimeType(MULTIPART)) {
+        } else if (eMailMessageContentPart.isMimeType("multipart/*")) {
             Multipart eMailMessageContentMultipart=(Multipart) eMailMessageContentPart.getContent();
             int eMailMessageContentPartAmount=eMailMessageContentMultipart.getCount();
             HashMap<String, Object> partContentTypeAndContent=new HashMap<>();
@@ -903,14 +888,14 @@ public class EMailService implements Animation.AnimationListener, ValueAnimator.
                 partContentTypeAndContent.putAll(loadEMailMessageContent(contentPart));
             }
             return partContentTypeAndContent;
-        } else if (eMailMessageContentPart.isMimeType(MESSAGE_RFC822)) {
+        } else if (eMailMessageContentPart.isMimeType("message/rfc822")) {
             HashMap<String, Object> partContentTypeAndContent=new HashMap<>();
             Part nestedMessageContent = (Part) eMailMessageContentPart.getContent();
             partContentTypeAndContent.putAll(loadEMailMessageContent(nestedMessageContent));
             return partContentTypeAndContent;
         }
             HashMap<String, Object> partContentTypeAndContent = new HashMap<>();
-            partContentTypeAndContent.put(UNKNOWN_CONTENT_TYPE, null);
+            partContentTypeAndContent.put("unknown", null);
             System.out.println(eMailMessageContentPart.getContentType());
             return partContentTypeAndContent;
     }
@@ -919,12 +904,8 @@ public class EMailService implements Animation.AnimationListener, ValueAnimator.
         executor.execute((Runnable) () -> {
             try {
                 EMailService.hasLogOut=true;
-                folder.close();
-                store.close();
                 EMailService.hasDisplayedMessages=false;
-                eMailMessagesDisplayed.clear();
                 eMailMessagesLoadedCurrent.clear();
-                eMailMessagesLoadedAllAmount =0;
                 if (modeMainMenuDeleting)
                     modeMainMenuDeleting =false;
                 activityCurrent.runOnUiThread((Runnable) () -> {
@@ -939,6 +920,11 @@ public class EMailService implements Animation.AnimationListener, ValueAnimator.
         });
     }
 
+    public static void saveDisplayedEMailMessages() {
+        eMailMessagesLoadedCurrent.addAll(getDisplayedEMailMessages());
+        displayedEMailMessagesCount=0;
+    }
+
     public static void setEMailMessageCurrent(EMailMessage eMailMessage) {
         eMailMessageCurrent = eMailMessage;
     }
@@ -948,8 +934,8 @@ public class EMailService implements Animation.AnimationListener, ValueAnimator.
     }
 
     public static String formatSentDate(Date date) {
-        SimpleDateFormat sendDateFormat = new SimpleDateFormat("MMM, dd hh:mm");
-        String sentDate = sendDateFormat.format(date);
+        SimpleDateFormat sentDateFormat = new SimpleDateFormat("MMM, dd hh:mm");
+        String sentDate = sentDateFormat.format(date);
         return sentDate;
     }
 
