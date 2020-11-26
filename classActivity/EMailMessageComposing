@@ -31,6 +31,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.view.ViewGroup;
 import android.view.LayoutInflater;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 
@@ -336,10 +337,10 @@ public class EMailMessageComposing extends AppCompatActivity {
                             Cursor cursor = getContentResolver().query(uri, null, null, null, null);
                             cursor.moveToFirst();
                             String contentType = cursor.getString(cursor.getColumnIndex(MediaStore.Files.FileColumns.MIME_TYPE));
-                            final LinearLayout attachmentLayout;
+                            final AttachmentLayout attachmentLayout;
                             final Drawable icon;
                             if (contentType.startsWith("image/")) {
-                                attachmentLayout = findViewById(R.id.email_message_composing_attachment_image_layout);;
+                                attachmentLayout = findViewById(R.id.email_message_composing_attachment_image_layout);
                                 Drawable imageIcon = ContextCompat.getDrawable(EMailMessageComposing.this, R.drawable.attachment_image);
                                 icon = imageIcon;
                             } else if (contentType.startsWith("application/")) {
@@ -351,35 +352,22 @@ public class EMailMessageComposing extends AppCompatActivity {
                                 Drawable audioIcon = ContextCompat.getDrawable(EMailMessageComposing.this, R.drawable.attachment_audio);
                                 icon = audioIcon;
                             }
-                            final FrameLayout attachmentIconLayout = new FrameLayout(EMailMessageComposing.this);
-                            attachmentIconLayout.setId(View.generateViewId());
                             final View attachmentLayoutParent = (View) attachmentLayout.getParent();
                             if (attachmentLayoutParent.getBackground() == null)
                                 attachmentLayoutParent.setBackground(attachmentLayoutBackground);
-                            attachmentLayout.setOnHierarchyChangeListener(new EMailService() {
-                                public void onChildViewRemoved(View parent, View child) {
-                                    LinearLayout layout=(LinearLayout) parent;
-                                    final int removedAttachmentIndex=layout.indexOfChild(child);
-                                    final int layoutViewsCount=layout.getChildCount();
-                                    final Animation animation=AnimationUtils.loadAnimation(EMailMessageComposing.this, R.anim.slide_right_left);
-                                    for (int index=removedAttachmentIndex+1; index<layoutViewsCount; index++) {
-                                        View attachment=layout.getChildAt(index);
-                                        attachment.startAnimation(animation);
-                                    }
-                                }
-                            });
-                            attachmentLayout.addView(attachmentIconLayout);
                             EnteringFileName enteringFileName = new EnteringFileName(EMailMessageComposing.this, popUpWindowLayout);
-                            Attachment attachment = new Attachment(EMailMessageComposing.this, icon, attachmentIconLayout);
+                            Attachment attachment = new Attachment(EMailMessageComposing.this, icon);
                             enteringFileName.setAttachmentToEnterFileName(attachment);
                             View eMailMessageComposingCurrentFocus = getCurrentFocus();
                             if (eMailMessageComposingCurrentFocus != null)
                                 eMailMessageComposingCurrentFocus.clearFocus();
                             popUpWindowLayout.setVisibility(VISIBLE);
-                            getSupportFragmentManager().beginTransaction()
-                                    .add(attachmentIconLayout.getId(), attachment)
+                            FragmentManager fragmentManager=getSupportFragmentManager();
+                            fragmentManager.beginTransaction()
+                                    .add(attachmentLayout.getId(), attachment, String.valueOf(attachmentLayout.getChildCount()))
                                     .add(popUpWindowLayout.getId(), enteringFileName)
-                                    .commit();
+                                    .commitNow();
+                            System.out.println(fragmentManager.findFragmentByTag("0"));
                             if (!hasAttachments) {
                                 hasAttachments = true;
                                 contentLayoutClickableAll.setVisibility(GONE);
@@ -713,15 +701,13 @@ public class EMailMessageComposing extends AppCompatActivity {
     public static class Attachment extends Fragment  {
         EMailMessageComposing eMailMessageComposing;
         Drawable icon;
-        FrameLayout parent;
         Uri content;
         String contentType;
         TextView fileName;
         GestureDetectorCompat gestureDetector;
 
-        public Attachment(EMailMessageComposing eMailMessageComposing, Drawable icon, FrameLayout parent) {
+        public Attachment(EMailMessageComposing eMailMessageComposing, Drawable icon) {
             this.eMailMessageComposing = eMailMessageComposing;
-            this.parent=parent;
             this.icon=icon;
         }
 
@@ -753,7 +739,6 @@ public class EMailMessageComposing extends AppCompatActivity {
                 }
 
                 public boolean onFling(MotionEvent firstEvent, MotionEvent secondEvent, float velocityX, float velocityY) {
-                    System.out.println(velocityY);
                     if (velocityY <= -100) {
                         AccelerateInterpolator accelerateInterpolator = new AccelerateInterpolator();
                         view.animate()
@@ -767,43 +752,35 @@ public class EMailMessageComposing extends AppCompatActivity {
                                 .setDuration(301)
                                 .setListener(new EMailService() {
                                     public void onAnimationEnd(Animator animator) {
-                                        try {
-                                            if (view.getAlpha() == 0) {
-                                                System.out.println("1");
-                                                final LinearLayout attachmentLayout = (LinearLayout) parent.getParent();
-                                                final int attachmentCurrentIndex = attachmentLayout.indexOfChild(parent);
-                                                final int attachmentLayoutViewsCount = attachmentLayout.getChildCount();
-                                                final Animation attachmentAnimation = AnimationUtils.loadAnimation(eMailMessageComposing, R.anim.slide_right_left);
-                                                final EMailService attachmentAnimationListener = new EMailService() {
-                                                    public void onAnimationEnd(Animation animation) {
-                                                        eMailMessageComposing.getSupportFragmentManager().beginTransaction()
-                                                                .remove(Attachment.this)
-                                                                .commitNow();
-                                                        attachmentLayout.removeView(parent);
+                                        AttachmentLayout attachmentsLayout = (AttachmentLayout) view.getParent();
+                                        if (view.getAlpha() == 0) {
+                                            final int attachmentsLayoutViewsCount = attachmentsLayout.getChildCount();
+                                            if (attachmentsLayoutViewsCount != 1) {
+                                                attachmentsLayout.setOnHierarchyChangeListener(new EMailService() {
+                                                    public void onChildViewRemoved(View parent, View child) {
+                                                        final View plugView=new View(eMailMessageComposing);
+                                                        plugView.setLayoutParams(view.getLayoutParams());
+                                                        attachmentsLayout.addView(plugView);
+                                                        final int removedAttachmentIndex=attachmentsLayout.indexOfChild(view);
+                                                        final Animation attachmentAnimation=AnimationUtils.loadAnimation(eMailMessageComposing,
+                                                                                                                            R.anim.slide_right_left);
+                                                        for (int index=removedAttachmentIndex+1; index<attachmentsLayoutViewsCount; index++) {
+                                                            View attachment=attachmentsLayout.getChildAt(index);
+                                                            if (index==attachmentsLayoutViewsCount-1) {
+                                                                attachmentAnimation.setAnimationListener(new EMailService() {
+                                                                    public void onAnimationEnd(Animation animation) {
+                                                                        attachmentsLayout.removeView(plugView);
+                                                                    }
+                                                                });
+                                                            }
+                                                            attachment.startAnimation(attachmentAnimation);
+                                                        }
                                                     }
-                                                };
-                                                System.out.println("2");
-                                                if (attachmentCurrentIndex == attachmentLayoutViewsCount - 1) {
-                                                    System.out.println("3");
-                                                    attachmentAnimation.setAnimationListener(attachmentAnimationListener);
-                                                    View attachment = parent.getChildAt(0);
-                                                    attachment.startAnimation(attachmentAnimation);
-                                                }
-                                                System.out.println("4");
-                                                for (int index = attachmentCurrentIndex; index < attachmentLayoutViewsCount; index++) {
-                                                    System.out.println("5");
-                                                    FrameLayout attachmentIconLayout = (FrameLayout) attachmentLayout.getChildAt(index);
-                                                    View attachment = attachmentIconLayout.getChildAt(0);
-                                                    System.out.println("6");
-                                                    if (index == attachmentLayoutViewsCount - 1)
-                                                        attachmentAnimation.setAnimationListener(attachmentAnimationListener);
-                                                    attachment.startAnimation(attachmentAnimation);
-                                                }
+                                                });
                                             }
-                                        } catch (Throwable e) {
-                                            StackTraceElement[] trace = e.getStackTrace();
-                                            for (StackTraceElement element:trace)
-                                                System.out.println(element);
+                                            eMailMessageComposing.getSupportFragmentManager().beginTransaction()
+                                                    .remove(Attachment.this)
+                                                    .commitNow();
                                         }
                                     }
                                 })
