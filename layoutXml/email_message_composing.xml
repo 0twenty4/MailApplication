@@ -9,19 +9,29 @@
     android:background="@color/white">
 
     <View
+        android:id="@+id/email_message_composing_fragment_loading_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:elevation="8dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"/>
+
+    <View
         android:id="@+id/email_message_composing_shadow"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:alpha="0"
+        android:elevation="6dp"
         android:foreground="@color/shadow"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <FrameLayout
-        android:id="@+id/email_message_composing_entering_file_name_layout"
+        android:id="@+id/email_message_composing_pop_up_window_layout"
         android:layout_width="330dp"
         android:layout_height="154dp"
         android:layout_marginBottom="50dp"
+        android:elevation="7dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
@@ -50,7 +60,7 @@
             app:srcCompat="@drawable/back" />
 
         <ImageView
-            android:id="@+id/email_message_composing_attachment"
+            android:id="@+id/email_message_composing_attachment_icon"
             android:layout_width="35dp"
             android:layout_height="35dp"
             android:layout_marginEnd="40dp"
@@ -266,17 +276,24 @@
                     android:showDividers="middle"
                     android:orientation="vertical">
 
-                <EditText
-                    android:id="@+id/email_message_composing_content"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:backgroundTint="@color/transparent"
-                    android:focusable="false"
-                    android:hint="@string/compose_message"
-                    android:inputType="textMultiLine"
-                    android:textSize="18sp"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"/>
+                    <androidx.constraintlayout.widget.ConstraintLayout
+                        android:id="@+id/email_message_composing_content_layout_clickable_text"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent">
+
+                    <EditText
+                        android:id="@+id/email_message_composing_content"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:backgroundTint="@color/transparent"
+                        android:focusable="false"
+                        android:hint="@string/compose_message"
+                        android:inputType="textMultiLine"
+                        android:textSize="18sp"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"/>
+
+                    </androidx.constraintlayout.widget.ConstraintLayout>
 
                     <HorizontalScrollView
                         android:layout_width="match_parent"
@@ -286,8 +303,6 @@
                             android:id="@+id/email_message_composing_attachment_image_layout"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:divider="@color/white"
-                            android:dividerPadding="10dp"
                             android:orientation="horizontal"/>
 
                     </HorizontalScrollView>
@@ -296,13 +311,11 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content">
 
-                    <LinearLayout
-                        android:id="@+id/email_message_composing_attachment_document_layout"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:divider="@color/white"
-                        android:dividerPadding="10dp"
-                        android:orientation="horizontal"/>
+                        <LinearLayout
+                            android:id="@+id/email_message_composing_attachment_document_layout"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"/>
 
                     </HorizontalScrollView>
 
@@ -310,13 +323,11 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content">
 
-                    <LinearLayout
-                        android:id="@+id/email_message_composing_attachment_audio_layout"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:divider="@color/white"
-                        android:dividerPadding="10dp"
-                        android:orientation="horizontal"/>
+                        <LinearLayout
+                            android:id="@+id/email_message_composing_attachment_audio_layout"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"/>
 
                     </HorizontalScrollView>
                 </LinearLayout>
@@ -324,7 +335,7 @@
             </ScrollView>
 
             <View
-                android:id="@+id/email_message_composing_content_layout_clickable"
+                android:id="@+id/email_message_composing_content_layout_clickable_all"
                 android:layout_width="match_parent"
                 android:layout_height="444dp"
                 android:layout_marginStart="10dp"
