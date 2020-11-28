@@ -17,7 +17,6 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Base64;
 import android.util.TypedValue;
-import android.view.GestureDetector;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.Animation;
@@ -67,7 +66,7 @@ import javax.mail.util.ByteArrayDataSource;
 
 import java.io.InputStream;
 
-public class EMailService extends GestureDetector.SimpleOnGestureListener implements Animation.AnimationListener, ValueAnimator.AnimatorListener, ValueAnimator.AnimatorUpdateListener,
+public class EMailService  implements Animation.AnimationListener, ValueAnimator.AnimatorListener, ValueAnimator.AnimatorUpdateListener,
                                     View.OnClickListener, View.OnLongClickListener, View.OnFocusChangeListener,
                                     TextWatcher,
                                     ViewGroup.OnHierarchyChangeListener {
@@ -413,7 +412,7 @@ public class EMailService extends GestureDetector.SimpleOnGestureListener implem
         });
     }
 
-    public static void sendEMailMessage(ArrayList<LayoutPart> eMailMessageTo, TextView eMailMessageSubject, TextView eMailMessageText, ArrayList<EMailMessageComposing.Attachment> attachments) {
+    public static void sendEMailMessage(HashMap<LayoutPart, String> recipients, TextView eMailMessageSubject, TextView eMailMessageText, ArrayList<EMailMessageComposing.Attachment> attachments) {
         View activityCurrentFragmentLoadingLayout=activityCurrent.findViewById(activityCurrentFragmentLoadingLayoutId);
         activityCurrentFragmentLoadingLayout.setVisibility(VISIBLE);
         Fragment fragmentLoadingCurrent=new EMailMessageComposing.EMailMessageSending();
@@ -449,21 +448,35 @@ public class EMailService extends GestureDetector.SimpleOnGestureListener implem
                             eMailMessageContent.addBodyPart(eMailMessagePartAttachment);
                         }
                     }
-                    final String firstEMailAddress = eMailMessageTo.get(0).eMailAddress;
-                    if (eMailMessageTo.size() == 1) {
-                        eMailMessage.setRecipients(Message.RecipientType.TO, firstEMailAddress);
-                    } else {
-                        StringBuilder eMailAddresses = new StringBuilder();
-                        eMailAddresses.append(firstEMailAddress);
-                        if (eMailMessageTo.size() > 1) {
-                            final String comma = ",";
-                            for (int index = 1; index < eMailMessageTo.size(); index++) {
-                                String eMailAddress = eMailMessageTo.get(index).eMailAddress;
-                                eMailAddresses.append(comma).append(eMailAddress);
+                    final StringBuilder eMailAddressesTo=new StringBuilder();
+                    final StringBuilder eMailAddressesBcc=new StringBuilder();
+                    final StringBuilder eMailAddressesCc=new StringBuilder();
+                    for (Map.Entry<LayoutPart, String> recipient:recipients.entrySet()) {
+                        final String eMailAddress=recipient.getKey().eMailAddress;
+                        final String recipientType=recipient.getValue();
+                        if (recipientType.equals("To")) {
+                            if (eMailAddressesTo.length() != 0) {
+                                final String comma = ", ";
+                                eMailAddressesTo.append(comma);
                             }
+                            eMailAddressesTo.append(eMailAddress);
+                        } else if (recipientType.equals("Bcc")) {
+                            if (eMailAddressesCc.length()!=0) {
+                                final String comma=", ";
+                                eMailAddressesBcc.append(comma);
+                            }
+                            eMailAddressesBcc.append(eMailAddress);
+                        } else {
+                            if (eMailAddressesCc.length()!=0) {
+                                final String comma=", ";
+                                eMailAddressesCc.append(comma);
+                            }
+                            eMailAddressesCc.append(eMailAddress);
                         }
-                        eMailMessage.setRecipients(Message.RecipientType.TO, eMailAddresses.toString());
                     }
+                    eMailMessage.setRecipients(Message.RecipientType.TO, eMailAddressesTo.toString());
+                    eMailMessage.setRecipients(Message.RecipientType.BCC, eMailAddressesBcc.toString());
+                    eMailMessage.setRecipients(Message.RecipientType.CC, eMailAddressesCc.toString());
                     eMailMessage.setContent(eMailMessageContent);
                     eMailMessage.saveChanges();
                     Transport.send(eMailMessage, currentUserEMailAddress, currentUserPassword);
