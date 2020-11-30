@@ -31,7 +31,7 @@
         android:id="@+id/email_message_composing_pop_up_window_layout"
         android:layout_width="330dp"
         android:layout_height="154dp"
-        android:layout_marginBottom="50dp"
+        android:layout_marginBottom="70dp"
         android:elevation="7dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -220,13 +220,21 @@
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/email_message_composing_cc_bcc_layout_constraint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:layout_constraintTop_toBottomOf="@id/email_message_composing_from_to_layout_constraint"
+                app:layout_constraintStart_toStartOf="parent">
 
             <FrameLayout
                 android:id="@+id/email_message_composing_cc_bcc_layout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/email_message_composing_from_to_layout_constraint"/>
+                app:layout_constraintTop_toTopOf="parent"/>
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/email_message_composing_subject_content_layout"
