@@ -9,6 +9,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.constraintlayout.solver.widgets.Guideline;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.GestureDetectorCompat;
 import androidx.fragment.app.Fragment;
@@ -25,7 +26,6 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewPropertyAnimator;
 
-import android.view.ViewTreeObserver;
 import android.view.animation.AccelerateInterpolator;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
@@ -57,6 +57,7 @@ public class EMailMessageComposing extends AppCompatActivity {
     View lastFocusForOnBackPressed;
     float popUpWindowLayoutOriginY;
     int adjustDifference;
+    GestureDetectorCompat gestureDetector;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -79,7 +80,7 @@ public class EMailMessageComposing extends AppCompatActivity {
                 final int charactersCount = text.length();
                 if (charactersCount > 0) {
                     char characterLast = text.charAt(charactersCount - 1);
-                    final String enterEMailAddress=getString(R.string.enter_email_address);
+                    final String enterEMailAddress = getString(R.string.enter_email_address);
                     if (!text.toString().equals(enterEMailAddress)) {
                         final HashMap<String, Object> recipientsLayoutData = getRecipientsLayoutData(0);
                         final RecipientsLayoutEnter currentRecipientsLayoutEnter = (RecipientsLayoutEnter) recipientsLayoutData.get("enter");
@@ -370,16 +371,16 @@ public class EMailMessageComposing extends AppCompatActivity {
                         getSupportFragmentManager().beginTransaction()
                                 .add(popUpWindowLayout.getId(), confirmingSendingEmptyMessage, "confirming sending empty message")
                                 .commitNow();
-                            EMailService confirmingSendingEmptyMessageClickListener = new EMailService() {
-                                public void onClick(View view) {
-                                    final int viewId = view.getId();
-                                    getSupportFragmentManager().beginTransaction()
-                                            .remove(confirmingSendingEmptyMessage)
-                                            .commitNow();
-                                    if (viewId == confirmingSendingEmptyMessage.yes.getId())
-                                        sendEMailMessage(recipientsLayoutParts, subject, content, attachments);
-                                }
-                            };
+                        EMailService confirmingSendingEmptyMessageClickListener = new EMailService() {
+                            public void onClick(View view) {
+                                final int viewId = view.getId();
+                                getSupportFragmentManager().beginTransaction()
+                                        .remove(confirmingSendingEmptyMessage)
+                                        .commitNow();
+                                if (viewId == confirmingSendingEmptyMessage.yes.getId())
+                                    sendEMailMessage(recipientsLayoutParts, subject, content, attachments);
+                            }
+                        };
                         confirmingSendingEmptyMessage.yes.setOnClickListener(confirmingSendingEmptyMessageClickListener);
                         confirmingSendingEmptyMessage.no.setOnClickListener(confirmingSendingEmptyMessageClickListener);
                     } else
@@ -423,12 +424,12 @@ public class EMailMessageComposing extends AppCompatActivity {
                     final View currentRecipientsLayoutClickable = (View) recipientsLayoutData.get("layout clickable");
                     currentRecipientsLayoutClickable.setVisibility(GONE);
                 } else {
-                    final View currentFocus=getCurrentFocus();
+                    final View currentFocus = getCurrentFocus();
                     if (currentFocus != null)
                         makeCurrentFocusLayoutClickableVisible(currentFocus);
                     final View viewToShowKeyboard;
                     if (viewId == R.id.email_message_composing_content_layout_clickable_all ||
-                        viewId==R.id.email_message_composing_content_layout_clickable_text) {
+                            viewId == R.id.email_message_composing_content_layout_clickable_text) {
                         content.setFocusableInTouchMode(true);
                         content.setFocusable(true);
                         content.requestFocus();
@@ -453,7 +454,6 @@ public class EMailMessageComposing extends AppCompatActivity {
         subjectLayoutClickable.bringToFront();
         View shadow = findViewById(R.id.email_message_composing_shadow);
         shadow.bringToFront();
-        Drawable attachmentLayoutBackground = ContextCompat.getDrawable(this, R.drawable.background_attachment_layout);
         resultLauncher = registerForActivityResult(new ActivityResultContracts.GetContent(),
                 (ActivityResultCallback<Uri>) (uri) -> {
                     if (uri != null) {
@@ -462,18 +462,22 @@ public class EMailMessageComposing extends AppCompatActivity {
                         Cursor cursor = getContentResolver().query(uri, null, null, null, null);
                         cursor.moveToFirst();
                         String contentType = cursor.getString(cursor.getColumnIndex(MediaStore.Files.FileColumns.MIME_TYPE));
-                        final AttachmentLayout attachmentLayout;
+                        final AttachmentLayout attachmentsLayout;
+                        final View attachmentsLayoutClickable;
                         final Drawable icon;
                         if (contentType.startsWith("image/")) {
-                            attachmentLayout = findViewById(R.id.email_message_composing_attachment_image_layout);
+                            attachmentsLayout = findViewById(R.id.email_message_composing_attachment_image_layout);
+                            attachmentsLayoutClickable=findViewById(R.id.email_message_composing_attachment_image_layout_clickable);
                             Drawable imageIcon = ContextCompat.getDrawable(EMailMessageComposing.this, R.drawable.attachment_image);
                             icon = imageIcon;
                         } else if (contentType.startsWith("application/")) {
-                            attachmentLayout = findViewById(R.id.email_message_composing_attachment_document_layout);
+                            attachmentsLayout = findViewById(R.id.email_message_composing_attachment_document_layout);
+                            attachmentsLayoutClickable=findViewById(R.id.email_message_composing_attachment_document_layout_clickable);
                             Drawable documentIcon = ContextCompat.getDrawable(EMailMessageComposing.this, R.drawable.attachment_document);
                             icon = documentIcon;
                         } else {
-                            attachmentLayout = findViewById(R.id.email_message_composing_attachment_audio_layout);
+                            attachmentsLayout = findViewById(R.id.email_message_composing_attachment_audio_layout);
+                            attachmentsLayoutClickable=findViewById(R.id.email_message_composing_attachment_audio_layout_clickable);
                             Drawable audioIcon = ContextCompat.getDrawable(EMailMessageComposing.this, R.drawable.attachment_audio);
                             icon = audioIcon;
                         }
@@ -484,49 +488,216 @@ public class EMailMessageComposing extends AppCompatActivity {
                         if (eMailMessageComposingCurrentFocus != null)
                             eMailMessageComposingCurrentFocus.clearFocus();
                         popUpWindowLayout.setVisibility(VISIBLE);
-                        final FragmentTransaction fragmentTransaction=getSupportFragmentManager().beginTransaction();
+                        final FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
                         fragmentTransaction
-                                .add(attachmentLayout.getId(), attachment)
+                                .add(attachmentsLayout.getId(), attachment)
                                 .add(popUpWindowLayout.getId(), enteringFileName, "entering file name")
                                 .commitNow();
+                        if (attachmentsLayoutClickable.getVisibility()==GONE)
+                            attachmentsLayoutClickable.setVisibility(VISIBLE);
                         attachment.content = uri;
                         attachment.contentType = contentType;
                         if (attachments == null)
                             attachments = new ArrayList<>();
                         attachments.add(attachment);
-                        final View contentLayoutClickableAll=findViewById(R.id.email_message_composing_content_layout_clickable_all);
+                        final View contentLayoutClickableAll = findViewById(R.id.email_message_composing_content_layout_clickable_all);
                         if (!attachments.isEmpty()) {
-                            if (contentLayoutClickableAll.getVisibility()==VISIBLE) {
+                            if (contentLayoutClickableAll.getVisibility() == VISIBLE) {
                                 contentLayoutClickableAll.setVisibility(GONE);
-                                final View contentLayoutClickableText=findViewById(R.id.email_message_composing_content_layout_clickable_text);
+                                final View contentLayoutClickableText = findViewById(R.id.email_message_composing_content_layout_clickable_text);
                                 contentLayoutClickableText.setOnClickListener(eMailMessageComposingClickListener);
                                 contentLayoutClickableText.bringToFront();
                             }
                         } else {
-                            if (contentLayoutClickableAll.getVisibility()==GONE) {
+                            if (contentLayoutClickableAll.getVisibility() == GONE) {
                                 contentLayoutClickableAll.setVisibility(VISIBLE);
                                 contentLayoutClickableAll.bringToFront();
-                                final View contentLayoutClickableText=findViewById(R.id.email_message_composing_content_layout_clickable_text);
+                                final View contentLayoutClickableText = findViewById(R.id.email_message_composing_content_layout_clickable_text);
                                 contentLayoutClickableText.setVisibility(GONE);
                             }
                         }
                     }
                 });
-        View contentLayoutClickableAll=findViewById(R.id.email_message_composing_content_layout_clickable_all);
+        View contentLayoutClickableAll = findViewById(R.id.email_message_composing_content_layout_clickable_all);
         contentLayoutClickableAll.setOnClickListener(eMailMessageComposingClickListener);
         getWindow().getDecorView().getViewTreeObserver().addOnGlobalLayoutListener(new EMailService() {
             public void onGlobalLayout() {
-                final View window=getWindow().getDecorView();
-                final View rootView=findViewById(R.id.email_message_composing);
-                adjustDifference=window.getHeight()-rootView.getHeight();
+                final View window = getWindow().getDecorView();
+                final View rootView = findViewById(R.id.email_message_composing);
+                adjustDifference = window.getHeight() - rootView.getHeight();
             }
         });
-        View eMailMessageComposingScroll=findViewById(R.id.email_message_composing_scroll);
-        eMailMessageComposingScroll.getViewTreeObserver().addOnScrollChangedListener(new ViewTreeObserver.OnScrollChangedListener() {
+        gestureDetector = new GestureDetectorCompat(this, new GestureDetector.SimpleOnGestureListener() {
 
             @Override
-            public void onScrollChanged() {
-                System.out.println("hello");
+            public boolean onSingleTapConfirmed(MotionEvent event) {
+                final View attachmentsImageLayoutClickable = findViewById(R.id.email_message_composing_attachment_image_layout_clickable);
+                if (!attachmentsImageLayoutClickable.isClickable()) {
+                    attachmentsImageLayoutClickable.setClickable(true);
+                    attachmentsImageLayoutClickable.setVisibility(VISIBLE);
+                } else {
+                    final View attachmentsDocumentLayoutClickable = findViewById(R.id.email_message_composing_attachment_document_layout_clickable);
+                    if (!attachmentsDocumentLayoutClickable.isClickable()) {
+                        attachmentsDocumentLayoutClickable.setClickable(true);
+                        attachmentsDocumentLayoutClickable.setVisibility(VISIBLE);
+                    } else {
+                        final View attachmentsAudioLayoutClickable = findViewById(R.id.email_message_composing_attachment_audio_layout_clickable);
+                        attachmentsAudioLayoutClickable.setClickable(true);
+                        attachmentsAudioLayoutClickable.setVisibility(VISIBLE);
+                    }
+                }
+                final View eMailMessageComposingScroll = findViewById(R.id.email_message_composing_scroll);
+                eMailMessageComposingScroll.setOnTouchListener(null);
+                final View eMailMessageComposingScrollLayoutClickable = findViewById(R.id.email_message_composing_scroll_layout_clickable);
+                eMailMessageComposingScrollLayoutClickable.setVisibility(GONE);
+                return true;
+            }
+
+            @Override
+            public boolean onFling(MotionEvent firstEvent, MotionEvent secondEvent, float velocityX, float velocityY) {
+                if (velocityY <= -100) {
+                    final MotionEvent.PointerCoords pointerCoords = new MotionEvent.PointerCoords();
+                    firstEvent.getPointerCoords(0, pointerCoords);
+                    final int[] location = new int[2];
+                    final View eMailMessageComposingSubjectContentLayout = findViewById(R.id.email_message_composing_subject_content_layout);
+                    eMailMessageComposingSubjectContentLayout.getLocationOnScreen(location);
+                    final int eMailMessageComposingSubjectContentLayoutTopY = location[1];
+                    if (pointerCoords.y > eMailMessageComposingSubjectContentLayoutTopY) {
+                        final LinearLayout currentAttachmentsLayout;
+                        final View currentAttachmentsLayoutClickable;
+                        final String currentContentType;
+                        final View attachmentsImageLayoutClickable = findViewById(R.id.email_message_composing_attachment_image_layout_clickable);
+                        if (!attachmentsImageLayoutClickable.isClickable()) {
+                            currentAttachmentsLayout = findViewById(R.id.email_message_composing_attachment_image_layout);
+                            currentAttachmentsLayoutClickable = attachmentsImageLayoutClickable;
+                            currentContentType = "image";
+                        } else {
+                            final View attachmentsDocumentLayoutClickable = findViewById(R.id.email_message_composing_attachment_document_layout_clickable);
+                            if (!attachmentsDocumentLayoutClickable.isClickable()) {
+                                currentAttachmentsLayout = findViewById(R.id.email_message_composing_attachment_document_layout);
+                                currentAttachmentsLayoutClickable = attachmentsDocumentLayoutClickable;
+                                currentContentType = "application";
+                            } else {
+                                currentAttachmentsLayout = findViewById(R.id.email_message_composing_attachment_audio_layout);
+                                currentAttachmentsLayoutClickable = findViewById(R.id.email_message_composing_attachment_audio_layout_clickable);
+                                currentContentType = "audio";
+                            }
+                        }
+                        currentAttachmentsLayout.getLocationOnScreen(location);
+                        final int currentAttachmentsLayoutTopY = location[1];
+                        final int viewMeasurer = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED);
+                        currentAttachmentsLayout.measure(viewMeasurer, viewMeasurer);
+                        final int currentAttachmentsLayoutBottomY = currentAttachmentsLayoutTopY + currentAttachmentsLayout.getMeasuredHeight();
+                        if (pointerCoords.y > currentAttachmentsLayoutTopY && pointerCoords.y <= currentAttachmentsLayoutBottomY) {
+                            System.out.println(pointerCoords.x);
+                            final View sampleAttachmentView = attachments.get(0).getView();
+                            sampleAttachmentView.measure(viewMeasurer, viewMeasurer);
+                            int removedAttachmentIndex = (int)(pointerCoords.x / sampleAttachmentView.getMeasuredWidth());
+                            if (removedAttachmentIndex==-1)
+                                removedAttachmentIndex++;
+                            final int currentAttachmentsLayoutViewsCount = currentAttachmentsLayout.getChildCount();
+                            if (removedAttachmentIndex < currentAttachmentsLayoutViewsCount) {
+                                for (int index = 0, currentContentTypeAttachmentCount = 0; index < attachments.size(); index++) {
+                                    final Attachment attachment = attachments.get(index);
+                                    final StringBuilder attachmentBaseContentType=new StringBuilder();
+                                    for (char attachmentContentTypeCharacter:attachment.contentType.toCharArray()) {
+                                        if (attachmentContentTypeCharacter!='/')
+                                            attachmentBaseContentType.append(attachmentContentTypeCharacter);
+                                        else
+                                            break;
+                                    }
+                                    if (attachmentBaseContentType.toString().equals(currentContentType)) {
+                                        currentContentTypeAttachmentCount++;
+                                        if (currentContentTypeAttachmentCount-1 == removedAttachmentIndex) {
+                                            attachments.remove(attachment);
+                                            final View removedAttachmentView = attachment.getView();
+                                            AccelerateInterpolator accelerateInterpolator = new AccelerateInterpolator();
+                                            removedAttachmentView.animate()
+                                                    .translationY(-100)
+                                                    .setInterpolator(accelerateInterpolator)
+                                                    .setDuration(300)
+                                                    .start();
+                                            removedAttachmentView.animate()
+                                                    .alpha(0)
+                                                    .setInterpolator(accelerateInterpolator)
+                                                    .setDuration(301)
+                                                    .setListener(new EMailService() {
+
+                                                        public void onAnimationEnd(Animator animator) {
+                                                            if (removedAttachmentView.getAlpha() == 0) {
+                                                                final int currentAttachmentsLayoutViewsCount= currentAttachmentsLayout.getChildCount();
+                                                                final int removedAttachmentIndex = currentAttachmentsLayout.indexOfChild(removedAttachmentView);
+                                                                getSupportFragmentManager().beginTransaction()
+                                                                        .remove(attachment)
+                                                                        .commitNow();
+                                                                if (currentAttachmentsLayoutViewsCount != 1) {
+                                                                    View plugView = new View(EMailMessageComposing.this);
+                                                                    plugView.setLayoutParams(removedAttachmentView.getLayoutParams());
+                                                                    currentAttachmentsLayout.addView(plugView);
+                                                                    final Animation attachmentAnimation = AnimationUtils.loadAnimation(EMailMessageComposing.this,
+                                                                            R.anim.slide_right_left);
+                                                                    for (int index = removedAttachmentIndex; index < currentAttachmentsLayoutViewsCount; index++) {
+                                                                        View attachment = currentAttachmentsLayout.getChildAt(index);
+                                                                        if (index == currentAttachmentsLayoutViewsCount - 1) {
+                                                                            attachmentAnimation.setAnimationListener(new EMailService() {
+                                                                                public void onAnimationEnd(Animation animation) {
+                                                                                    currentAttachmentsLayout.removeView(plugView);
+                                                                                }
+                                                                            });
+                                                                        }
+                                                                        attachment.startAnimation(attachmentAnimation);
+                                                                    }
+                                                                } else
+                                                                    currentAttachmentsLayoutClickable.setVisibility(GONE);
+                                                            }
+                                                        }
+                                                    })
+                                                    .start();
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                return true;
+            }
+        });
+        EMailService attachmentsLayoutClickableLongClickListener=new EMailService() {
+
+            @Override
+            public boolean onLongClick(View view) {
+                view.setVisibility(GONE);
+                view.setClickable(false);
+                final View eMailMessageComposingScroll = findViewById(R.id.email_message_composing_scroll);
+                eMailMessageComposingScroll.setOnTouchListener(new EMailService() {
+
+                    @Override
+                    public boolean onTouch(View view, MotionEvent event) {
+                        final int action = event.getAction();
+                        if (action == MotionEvent.ACTION_SCROLL)
+                            return false;
+                        return true;
+                    }
+                });
+                final View eMailMessageComposingScrollLayoutClickable = findViewById(R.id.email_message_composing_scroll_layout_clickable);
+                eMailMessageComposingScrollLayoutClickable.setVisibility(VISIBLE);
+                return true;
+            }
+        };
+        View attachmentsImageLayoutClickable=findViewById(R.id.email_message_composing_attachment_image_layout_clickable);
+        attachmentsImageLayoutClickable.setOnLongClickListener(attachmentsLayoutClickableLongClickListener);
+        View attachmentsDocumentLayoutClickable=findViewById(R.id.email_message_composing_attachment_document_layout_clickable);
+        attachmentsDocumentLayoutClickable.setOnLongClickListener(attachmentsLayoutClickableLongClickListener);
+        View attachmentsAudioLayoutClickable=findViewById(R.id.email_message_composing_attachment_audio_layout_clickable);
+        attachmentsAudioLayoutClickable.setOnLongClickListener(attachmentsLayoutClickableLongClickListener);
+        View scrollLayoutClickable=findViewById(R.id.email_message_composing_scroll_layout_clickable);
+        scrollLayoutClickable.setOnTouchListener(new EMailService() {
+
+            @Override
+            public boolean onTouch(View view, MotionEvent event) {
+                return gestureDetector.onTouchEvent(event);
             }
         });
     }
@@ -548,7 +719,7 @@ public class EMailMessageComposing extends AppCompatActivity {
         }
     }
 
-    public void deleteToLayoutPart(@NonNull LayoutPart layoutPart) {
+    public void deleteRecipientsLayoutPart(@NonNull LayoutPart layoutPart) {
         View layoutPartFrame = (View) layoutPart.getView().getParent();
         getSupportFragmentManager().beginTransaction()
                 .remove(layoutPart)
@@ -975,6 +1146,7 @@ public class EMailMessageComposing extends AppCompatActivity {
         TextView fileName;
         ImageView addFileName;
         GestureDetectorCompat gestureDetector;
+        GestureDetector.SimpleOnGestureListener gestureDetectorListener;
 
         public Attachment(EMailMessageComposing eMailMessageComposing, Drawable icon) {
             this.eMailMessageComposing = eMailMessageComposing;
@@ -988,11 +1160,6 @@ public class EMailMessageComposing extends AppCompatActivity {
         public void onViewCreated(View view, Bundle savedInstanceState) {
             ImageView icon = view.findViewById(R.id.email_message_composing_attachment);
             icon.setImageDrawable(this.icon);
-            icon.setOnTouchListener(new View.OnTouchListener() {
-                public boolean onTouch(View view, MotionEvent event) {
-                    return gestureDetector.onTouchEvent(event);
-                }
-            });
             fileName = view.findViewById(R.id.email_message_composing_attachment_file_name);
             addFileName=view.findViewById(R.id.email_message_composing_attachment_add_file_name);
             View fileNameLayoutClickable = view.findViewById(R.id.email_message_composing_attachment_file_name_layout_clickable);
@@ -1001,63 +1168,13 @@ public class EMailMessageComposing extends AppCompatActivity {
                     eMailMessageComposing.changeFileName(Attachment.this);
                 }
             });
-            gestureDetector = new GestureDetectorCompat(getContext(), new GestureDetector.SimpleOnGestureListener() {
-
+            gestureDetectorListener=new GestureDetector.SimpleOnGestureListener() {
                 public boolean onSingleTapConfirmed(MotionEvent event) {
                     Intent intent = new Intent();
                     return true;
                 }
-
-                public boolean onFling(MotionEvent firstEvent, MotionEvent secondEvent, float velocityX, float velocityY) {
-                    if (velocityY <= -100) {
-                        AccelerateInterpolator accelerateInterpolator = new AccelerateInterpolator();
-                        view.animate()
-                                .translationY(-100)
-                                .setInterpolator(accelerateInterpolator)
-                                .setDuration(300)
-                                .start();
-                        view.animate()
-                                .alpha(0)
-                                .setInterpolator(accelerateInterpolator)
-                                .setDuration(301)
-                                .setListener(new EMailService() {
-                                    public void onAnimationEnd(Animator animator) {
-                                        if (view.getAlpha() == 0) {
-                                            eMailMessageComposing.attachments.remove(Attachment.this);
-                                            final AttachmentLayout attachmentsLayout = (AttachmentLayout) view.getParent();
-                                            final int attachmentsLayoutViewsCount = attachmentsLayout.getChildCount();
-                                            final int removedAttachmentIndex=attachmentsLayout.indexOfChild(view);
-                                            eMailMessageComposing.getSupportFragmentManager().beginTransaction()
-                                                    .remove(Attachment.this)
-                                                    .commitNow();
-                                            if (attachmentsLayoutViewsCount != 1) {
-                                                View plugView=new View(eMailMessageComposing);
-                                                plugView.setLayoutParams(view.getLayoutParams());
-                                                attachmentsLayout.addView(plugView);
-                                                System.out.println(removedAttachmentIndex);
-                                                final Animation attachmentAnimation=AnimationUtils.loadAnimation(eMailMessageComposing,
-                                                        R.anim.slide_right_left);
-                                                for (int index=removedAttachmentIndex; index<attachmentsLayoutViewsCount; index++) {
-                                                    View attachment=attachmentsLayout.getChildAt(index);
-                                                    if (index==attachmentsLayoutViewsCount-1) {
-                                                        attachmentAnimation.setAnimationListener(new EMailService() {
-                                                            public void onAnimationEnd(Animation animation) {
-                                                                attachmentsLayout.removeView(plugView);
-                                                                eMailMessageComposing.attachments.remove(Attachment.this);
-                                                            }
-                                                        });
-                                                    }
-                                                    attachment.startAnimation(attachmentAnimation);
-                                                }
-                                            }
-                                        }
-                                    }
-                                })
-                                .start();
-                    }
-                    return true;
-                }
-            });
+            };
+            gestureDetector = new GestureDetectorCompat(getContext(), gestureDetectorListener);
         }
     }
 
