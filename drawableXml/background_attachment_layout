@@ -1,7 +1,14 @@
-<selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item>
-        <layer-list>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
             <item>
+                <shape
+                    android:shape="rectangle">
+                    <solid
+                        android:color="@color/white"/>
+                </shape>
+            </item>
+            <item
+                android:id="@+id/background_attachments_layout_stroke"
+                android:top="10dp">
                 <shape
                     android:shape="rectangle">
                     <solid
@@ -12,13 +19,12 @@
                 </shape>
             </item>
             <item
-                android:top="1dp">
+                android:id="@+id/background_attachments_layout_top"
+                android:top="11dp">
                 <shape
                     android:shape="rectangle">
                     <solid
                         android:color="@color/white"/>
                 </shape>
             </item>
-        </layer-list>
-    </item>
-</selector>
+</layer-list>
