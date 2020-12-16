@@ -124,11 +124,11 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_marginTop="70dp"
-        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
         <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/email_message_composing_scroll_layout_constraint"
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
@@ -236,6 +236,7 @@
                 android:id="@+id/email_message_composing_cc_bcc_layout_constraint"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:visibility="gone"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/email_message_composing_from_to_layout_constraint">
 
@@ -265,8 +266,7 @@
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
-
-
+                
                 <FrameLayout
                     android:id="@+id/email_message_composing_subject_layout_root"
                     android:layout_width="match_parent"
@@ -313,9 +313,9 @@
                     app:layout_constraintTop_toBottomOf="@id/email_message_composing_subject_layout_root" />
 
                 <androidx.constraintlayout.widget.ConstraintLayout
-                    android:id="@+id/email_message_composing_content_scroll"
+                    android:id="@+id/email_message_composing_content_layout_constraint"
                     android:layout_width="match_parent"
-                    android:layout_height="444dp"
+                    android:layout_height="wrap_content"
                     android:layout_marginStart="10dp"
                     android:layout_marginTop="5dp"
                     android:layout_marginEnd="10dp"
@@ -325,6 +325,7 @@
                     app:layout_constraintTop_toBottomOf="@+id/email_message_composing_divider_dash_between_subject_content_scroll">
 
                     <com.example.mailapplication.AttachmentLayout
+                        android:id="@+id/email_message_composing_content_layout"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
@@ -334,7 +335,8 @@
                         <FrameLayout
                             android:id="@+id/email_message_composing_content_layout_root_text"
                             android:layout_width="match_parent"
-                            android:layout_height="wrap_content">
+                            android:layout_height="wrap_content"
+                            android:background="@color/transparent">
 
                             <EditText
                                 android:id="@+id/email_message_composing_content"
@@ -358,13 +360,13 @@
 
                         <FrameLayout
                             android:layout_width="match_parent"
-                            android:layout_height="wrap_content">
+                            android:layout_height="wrap_content"
+                            android:background="@color/transparent">
 
                             <HorizontalScrollView
                                 android:id="@+id/email_message_composing_attachment_image_layout_scroll"
                                 android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:background="@drawable/background_attachment_layout">
+                                android:layout_height="wrap_content">
 
                                 <com.example.mailapplication.AttachmentLayout
                                     android:id="@+id/email_message_composing_attachment_image_layout"
@@ -385,13 +387,13 @@
 
                         <FrameLayout
                             android:layout_width="match_parent"
-                            android:layout_height="wrap_content">
+                            android:layout_height="wrap_content"
+                            android:background="@color/transparent">
 
                             <HorizontalScrollView
                                 android:id="@+id/email_message_composing_attachment_document_layout_scroll"
                                 android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:background="@drawable/background_attachment_layout">
+                                android:layout_height="wrap_content">
 
                                 <com.example.mailapplication.AttachmentLayout
                                     android:id="@+id/email_message_composing_attachment_document_layout"
@@ -412,20 +414,20 @@
 
                         <FrameLayout
                             android:layout_width="match_parent"
-                            android:layout_height="wrap_content">
+                            android:layout_height="wrap_content"
+                            android:background="@color/transparent">
 
 
                             <HorizontalScrollView
                                 android:id="@+id/email_message_composing_attachment_audio_layout_scroll"
                                 android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:background="@drawable/background_attachment_layout">
+                                android:layout_height="wrap_content">
 
                                 <com.example.mailapplication.AttachmentLayout
                                     android:id="@+id/email_message_composing_attachment_audio_layout"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:orientation="horizontal"/>
+                                    android:orientation="horizontal" />
 
                             </HorizontalScrollView>
 
@@ -436,6 +438,32 @@
                                 android:background="@color/transparent"
                                 android:visibility="gone" />
 
+                        </FrameLayout>
+
+                        <FrameLayout
+                            android:id="@+id/email_message_composing_attachment_unknown_layout_root"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:background="@color/transparent">
+
+                            <HorizontalScrollView
+                                android:id="@+id/email_message_composing_attachment_unknown_layout_scroll"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content">
+
+                                <com.example.mailapplication.AttachmentLayout
+                                    android:id="@+id/email_message_composing_attachment_unknown_layout"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="horizontal" />
+                            </HorizontalScrollView>
+
+                            <Button
+                                android:id="@+id/email_message_composing_attachment_unknown_layout_clickable"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:background="@color/transparent"
+                                android:visibility="gone" />
                         </FrameLayout>
                     </com.example.mailapplication.AttachmentLayout>
 
@@ -454,8 +482,9 @@
                     app:layout_constraintTop_toBottomOf="@id/email_message_composing_divider_dash_between_subject_content_scroll" />
 
 
-            </androidx.constraintlayout.widget.ConstraintLayout>
 
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
         </androidx.constraintlayout.widget.ConstraintLayout>
 
     </ScrollView>
