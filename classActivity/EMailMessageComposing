@@ -8,6 +8,8 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.constraintlayout.widget.ConstraintSet;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.GestureDetectorCompat;
 import androidx.fragment.app.Fragment;
@@ -38,7 +40,6 @@ import android.view.ViewGroup;
 import android.view.LayoutInflater;
 import android.widget.ScrollView;
 import android.widget.TextView;
-
 
 import static android.view.View.VISIBLE;
 import static android.view.View.GONE;
@@ -161,8 +162,21 @@ public class EMailMessageComposing extends AppCompatActivity {
                     addCcBcc.setClickable(false);
                     final FragmentManager fragmentManager = getSupportFragmentManager();
                     if (!ccBccShown) {
-                        final View rootView=findViewById(R.id.email_message_composing);
-                        System.out.println(rootView.getHeight());
+                        final ScrollView scroll=findViewById(R.id.email_message_composing_scroll);
+                        scroll.setOnScrollChangeListener(new View.OnScrollChangeListener() {
+                            @Override
+                            public void onScrollChange(View view, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
+                                final View subjectContentLayout=findViewById(R.id.email_message_composing_subject_content_layout);
+                                final int[] location=new int[2];
+                                subjectContentLayout.getLocationOnScreen(location);
+                                final int viewMeasurer=View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED);
+                                subjectContentLayout.measure(viewMeasurer, viewMeasurer);
+                                final View top=findViewById(R.id.email_message_composing_top);
+                                top.measure(viewMeasurer, viewMeasurer);
+                                final int subjectContentLayoutBottomY=location[1]+subjectContentLayout.getMeasuredHeight()-top.getMeasuredHeight();
+                                if (scrollY>=subjectContentLayoutBottomY);
+                            }
+                        });
                         View ccBccLayoutConstraint = findViewById(R.id.email_message_composing_cc_bcc_layout_constraint);
                         ccBccLayoutConstraint.setVisibility(VISIBLE);
                         final CcBcc ccBcc = new CcBcc();
@@ -170,7 +184,7 @@ public class EMailMessageComposing extends AppCompatActivity {
                         getSupportFragmentManager().beginTransaction()
                                 .add(ccBccLayout.getId(), ccBcc, "ccBcc")
                                 .commitNow();
-                        final View ccBccView = ccBcc.getView();
+                        final View ccBccView=ccBcc.getView();
                         View bccLayoutClickable = ccBccView.findViewById(R.id.email_message_composing_bcc_layout_clickable);
                         bccLayoutClickable.setOnClickListener(this);
                         View ccLayoutClickable = ccBccView.findViewById(R.id.email_message_composing_cc_layout_clickable);
@@ -195,17 +209,9 @@ public class EMailMessageComposing extends AppCompatActivity {
                         EMailService ccBccHierarchyChangeListener = new EMailService() {
                             @Override
                             public void onChildViewAdded(View parent, View child) {
-                                final int parentId=parent.getId();
-                                final RecipientsLayoutEnter currentRecipientsLayoutEnter;
-                                if (parentId==R.id.email_message_composing_bcc_layout)
-                                    currentRecipientsLayoutEnter=(RecipientsLayoutEnter) getSupportFragmentManager().findFragmentByTag("Bcc");
-                                else
-                                    currentRecipientsLayoutEnter=(RecipientsLayoutEnter) getSupportFragmentManager().findFragmentByTag("Cc");
-                                currentRecipientsLayoutEnter.enter.removeTextChangedListener(recipientsLayoutTextChangedListener);
                                 // postDelayed method is needed here as without it parentPreviousHeight
                                 // and parentCurrentHeight variables may be equal what isn't correct and breaks the logic
                                 parent.postDelayed((Runnable) () -> {
-                                    final FragmentManager fragmentManager=getSupportFragmentManager();
                                     final int parentPreviousHeight = parent.getLayoutParams().height;
                                     final int viewMeasurer = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED);
                                     parent.measure(viewMeasurer, viewMeasurer);
@@ -219,26 +225,22 @@ public class EMailMessageComposing extends AppCompatActivity {
                                     if (parent.getId() == R.id.email_message_composing_bcc_layout)
                                         layoutClickable = ccBccView.findViewById(R.id.email_message_composing_bcc_layout_clickable);
                                     else
-                                        layoutClickable = ccBccView.findViewById(R.id.email_message_composing_cc_layout_clickable);
+                                        layoutClickable = ccBccView.findViewById(R.id.email_message_composing_cc_bcc_layout_constraint);
                                     layoutClickable.setLayoutParams(new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
                                             layoutClickable.getLayoutParams().height + parentHeightDifference));
-                                    final View subjectContentLayout = findViewById(R.id.email_message_composing_subject_content_layout);
-                                    subjectContentLayout.setY(subjectContentLayout.getY() + parentHeightDifference);
                                     FrameLayout.LayoutParams parentLayoutParams = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
                                             parentCurrentHeight);
                                     parentLayoutParams.setMargins(20, 15, 20, 15);
                                     parent.setLayoutParams(parentLayoutParams);
+                                    final View ccBccLayout=findViewById(R.id.email_message_composing_cc_bcc_layout);
+                                    ccBccLayout.measure(viewMeasurer, viewMeasurer);
                                     child.measure(viewMeasurer, viewMeasurer);
-                                    final View eMailMessageComposingScrollLayoutConstraint=findViewById(R.id.email_message_composing_scroll_layout_constraint);
-                                    eMailMessageComposingScrollLayoutConstraint.measure(viewMeasurer, viewMeasurer);
-                                    eMailMessageComposingScrollLayoutConstraint.setLayoutParams(new ScrollView.LayoutParams(ScrollView.LayoutParams.MATCH_PARENT, eMailMessageComposingScrollLayoutConstraint.getMeasuredHeight()+500));
-                                    ScrollView view;
-                                    view.
-                                    System.out.println(subjectContentLayout.getY()+" "+eMailMessageComposingScrollLayoutConstraint.getMeasuredHeight());
-                                    currentRecipientsLayoutEnter.enter.addTextChangedListener(recipientsLayoutTextChangedListener);
+                                    ccBccLayout.setLayoutParams(new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.MATCH_PARENT, ccBccLayout.getMeasuredHeight()+child.getMeasuredHeight()));
+
                                 }, 5);
                             }
 
+                            @Override
                             public void onChildViewRemoved(View parent, View child) {
                                 parent.postDelayed((Runnable) () -> {
                                     final int childHeight = child.getMeasuredHeight();
@@ -256,8 +258,10 @@ public class EMailMessageComposing extends AppCompatActivity {
                                             parent.getLayoutParams().height - childHeight);
                                     parentLayoutParams.setMargins(20, 15, 20, 15);
                                     parent.setLayoutParams(parentLayoutParams);
-                                    final View subjectContentLayout = findViewById(R.id.email_message_composing_subject_content_layout);
-                                    subjectContentLayout.setY(subjectContentLayout.getY() - childHeight);
+                                    final View ccBccLayout=findViewById(R.id.email_message_composing_cc_bcc_layout);
+                                    final int viewMeasurer=View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED);
+                                    ccBccLayout.measure(viewMeasurer, viewMeasurer);
+                                    ccBccLayout.setLayoutParams(new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.MATCH_PARENT, ccBccLayout.getMeasuredHeight()-childHeight));
                                 }, 5);
                             }
                         };
@@ -265,11 +269,11 @@ public class EMailMessageComposing extends AppCompatActivity {
                         bccLayout.setOnHierarchyChangeListener(ccBccHierarchyChangeListener);
                         final int viewMeasurer = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED);
                         ccLayout.measure(viewMeasurer, viewMeasurer);
-                        FrameLayout.LayoutParams ccBccLayoutLayoutParams = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
+                        FrameLayout.LayoutParams ccBccLayoutsLayoutParams = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
                                 ccLayout.getMeasuredHeight());
-                        ccBccLayoutLayoutParams.setMargins(20, 15, 20, 15);
-                        ccLayout.setLayoutParams(ccBccLayoutLayoutParams);
-                        bccLayout.setLayoutParams(ccBccLayoutLayoutParams);
+                        ccBccLayoutsLayoutParams.setMargins(20, 15, 20, 15);
+                        ccLayout.setLayoutParams(ccBccLayoutsLayoutParams);
+                        bccLayout.setLayoutParams(ccBccLayoutsLayoutParams);
                         ccBccView.measure(viewMeasurer, viewMeasurer);
                         ccBccView.setLayoutParams(new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
                                 ccBccView.getMeasuredHeight()));
@@ -278,23 +282,43 @@ public class EMailMessageComposing extends AppCompatActivity {
                                 bccLayoutClickable.getMeasuredHeight());
                         bccLayoutClickable.setLayoutParams(ccBccLayoutClickableLayoutParams);
                         ccLayoutClickable.setLayoutParams(ccBccLayoutClickableLayoutParams);
-                        final View subjectContentLayout = findViewById(R.id.email_message_composing_subject_content_layout);
+                        final View layout=findViewById(R.id.email_message_composing_cc_bcc_layout_constraint);
+                        layout.measure(viewMeasurer, viewMeasurer);
+                        System.out.println(layout.getMeasuredHeight());
+                        layout.setLayoutParams(new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.MATCH_PARENT, layout.getMeasuredHeight()));
+                        final View subjectContentLayout=findViewById(R.id.email_message_composing_subject_content_layout);
                         final ViewPropertyAnimator subjectContentLayoutAnimator = subjectContentLayout.animate();
                         // such weird animation duration numbers are needed to be able to create only one instance of AnimatorListener
                         boolean ccBccShownFirstTime = subjectContentLayoutAnimator.getDuration() == 300;
                         if (ccBccShownFirstTime) {
                             subjectContentLayoutAnimator.setListener(new EMailService() {
                                 public void onAnimationEnd(Animator animator) {
+                                    final FragmentManager fragmentManager=getSupportFragmentManager();
+                                    final Fragment ccBcc=fragmentManager.findFragmentByTag("ccBcc");
+                                    final ConstraintLayout scrollLayout=findViewById(R.id.email_message_composing_scroll_layout_constraint);
+                                    final ConstraintSet scrollLayoutConstraintSet=new ConstraintSet();
+                                    scrollLayoutConstraintSet.clone(scrollLayout);
+                                    final View subjectContentLayout=findViewById(R.id.email_message_composing_subject_content_layout);
                                     final float duration = animator.getDuration();
                                     if (duration == 302) {
-                                        getSupportFragmentManager().beginTransaction()
-                                                .remove(fragmentManager.findFragmentByTag("ccBcc"))
+                                        scrollLayoutConstraintSet.connect(R.id.email_message_composing_subject_content_layout, ConstraintSet.TOP,
+                                                R.id.email_message_composing_from_to_layout_constraint, ConstraintSet.BOTTOM);
+                                        scrollLayoutConstraintSet.applyTo(scrollLayout);
+                                        final View ccBccLayoutConstraint=findViewById(R.id.email_message_composing_cc_bcc_layout_constraint);
+                                        subjectContentLayout.setY(subjectContentLayout.getY()+ccBccLayoutConstraint.getMeasuredHeight());
+                                        fragmentManager.beginTransaction()
+                                                .remove(ccBcc)
                                                 .commitNow();
-                                        View ccBccLayoutConstraint = findViewById(R.id.email_message_composing_cc_bcc_layout_constraint);
                                         ccBccLayoutConstraint.setVisibility(GONE);
                                         ccBccShown = false;
-                                    } else
-                                        ccBccShown = true;
+                                    } else {
+                                        scrollLayoutConstraintSet.connect(R.id.email_message_composing_subject_content_layout, ConstraintSet.TOP,
+                                                                            R.id.email_message_composing_cc_bcc_layout_constraint, ConstraintSet.BOTTOM);
+                                        scrollLayoutConstraintSet.applyTo(scrollLayout);
+                                        final View ccBccView=ccBcc.getView();
+                                        subjectContentLayout.setY(subjectContentLayout.getY()-ccBccView.getMeasuredHeight());
+                                        ccBccShown=true;
+                                    }
                                     addCcBcc.setClickable(true);
                                 }
                             });
@@ -304,9 +328,10 @@ public class EMailMessageComposing extends AppCompatActivity {
                                 .setDuration(301)
                                 .start();
                     } else {
+                        final View ccBccView=fragmentManager.findFragmentByTag("ccBcc").getView();
                         final View subjectContentLayout = findViewById(R.id.email_message_composing_subject_content_layout);
                         subjectContentLayout.animate()
-                                .translationY(0)
+                                .translationY(-ccBccView.getLayoutParams().height)
                                 .setDuration(302)
                                 .start();
                     }
@@ -572,25 +597,6 @@ public class EMailMessageComposing extends AppCompatActivity {
                     if (enteringFileName != null) {
                         final View enteringFileNameCancel = enteringFileName.getView().findViewById(R.id.email_message_composing_entering_file_name_cancel_layout_clickable);
                         enteringFileNameCancel.performClick();
-                    }
-                } else {
-                    final Fragment ccBcc=fragmentManager.findFragmentByTag("ccBcc");
-                    if (ccBcc!=null) {
-                        final View currentFocus = getCurrentFocus();
-                        if (currentFocus != null) {
-                            final int[] location = new int[2];
-                            currentFocus.getLocationOnScreen(location);
-                            final ScrollView eMailMessageComposingScroll = findViewById(R.id.email_message_composing_scroll);
-                            final int viewMeasurer = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED);
-                            rootView.measure(viewMeasurer, viewMeasurer);
-                            System.out.println(rootView.getMeasuredHeight());
-                            final View ccBccView = ccBcc.getView();
-                            currentFocus.measure(viewMeasurer, viewMeasurer);
-                            ccBccView.measure(viewMeasurer, viewMeasurer);
-                            if (location[1] > windowHeight - adjustDifference) {
-                                eMailMessageComposingScroll.smoothScrollTo(0, eMailMessageComposingScroll.getMaxScrollAmount() + ccBccView.getMeasuredHeight()/2);
-                            }
-                        }
                     }
                 }
                 previousAdjustDifference=adjustDifference;
@@ -966,7 +972,6 @@ public class EMailMessageComposing extends AppCompatActivity {
         int attachmentsLayoutClickableTopY;
         int attachmentsLayoutClickableBottomY;
         int attachmentsLayoutViewsCount;
-        System.out.println(pointerY);
         final View attachmentsImageLayoutClickable = findViewById(R.id.email_message_composing_attachment_image_layout_clickable);
         attachmentsImageLayoutClickable.getLocationOnScreen(location);
         attachmentsImageLayoutClickable.measure(viewMeasurer, viewMeasurer);
