@@ -17,8 +17,10 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Base64;
 import android.util.TypedValue;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.view.animation.Animation;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
@@ -67,11 +69,13 @@ import javax.mail.util.ByteArrayDataSource;
 import java.io.InputStream;
 
 public class EMailService  implements Animation.AnimationListener, ValueAnimator.AnimatorListener, ValueAnimator.AnimatorUpdateListener,
-                                    View.OnClickListener, View.OnLongClickListener, View.OnFocusChangeListener,
-                                    TextWatcher,
-                                    ViewGroup.OnHierarchyChangeListener {
+        View.OnClickListener, View.OnLongClickListener, View.OnFocusChangeListener, ViewTreeObserver.OnGlobalLayoutListener, View.OnTouchListener,
+        TextWatcher,
+        ViewGroup.OnHierarchyChangeListener,
+        ViewTreeObserver.OnScrollChangedListener {
     private static String currentUserEMailAddress;
     private static String currentUserPassword;
+    private static String[] replyEMailAddresses;
     private static AppCompatActivity activityCurrent;
     private static int activityCurrentFragmentLoadingLayoutId;
     private static final ArrayList<EMailMessage> eMailMessagesLoadedCurrent = new ArrayList<>();
@@ -122,6 +126,18 @@ public class EMailService  implements Animation.AnimationListener, ValueAnimator
 
     public static int getActivityCurrentFragmentLoadingLayoutId() {
         return activityCurrentFragmentLoadingLayoutId;
+    }
+
+    public static void setReplyEMailAddresses(String[] eMailAddresses) {
+        replyEMailAddresses=eMailAddresses;
+    }
+
+    public static String[] getReplyEMailAddresses() {
+        return replyEMailAddresses;
+    }
+
+    public static void clearReplyEMailAddresses() {
+        replyEMailAddresses=null;
     }
 
     public static boolean hasLogOut() {
@@ -311,7 +327,7 @@ public class EMailService  implements Animation.AnimationListener, ValueAnimator
                     }
                 });
             }
-            } else {
+        } else {
             eMailMessageViewAnimator=ValueAnimator.ofArgb(grey, white).setDuration(300);
             for (EMailMessage eMailMessage:getDisplayedEMailMessages()) {
                 eMailMessage.ticked = false;
@@ -399,7 +415,7 @@ public class EMailService  implements Animation.AnimationListener, ValueAnimator
                         noMessages.setVisibility(GONE);
                     LoadMore loadMore = new LoadMore();
                     activityCurrent.getSupportFragmentManager().beginTransaction()
-                            .add(eMailMessagesLayout, loadMore)
+                            .add(eMailMessagesLayout, loadMore, "load more")
                             .commit();
                 } else {
                     if (noMessages.getVisibility() == GONE)
@@ -428,7 +444,7 @@ public class EMailService  implements Animation.AnimationListener, ValueAnimator
                     eMailMessage.setSubject(eMailMessageSubject.getText().toString());
                     MimeMultipart eMailMessageContent = new MimeMultipart();
                     MimeBodyPart eMailMessagePartText = new MimeBodyPart();
-                    eMailMessagePartText.setContent(eMailMessageText.getText().toString(), "text/html");
+                    eMailMessagePartText.setText(eMailMessageText.getText().toString());
                     eMailMessageContent.addBodyPart(eMailMessagePartText);
                     if (attachments!=null) {
                         final ContentResolver contentResolver = activityCurrent.getContentResolver();
@@ -481,7 +497,8 @@ public class EMailService  implements Animation.AnimationListener, ValueAnimator
                     eMailMessage.saveChanges();
                     Transport.send(eMailMessage, currentUserEMailAddress, currentUserPassword);
                     activityCurrent.runOnUiThread((Runnable) () -> {
-                        activityCurrent.onBackPressed();
+                        View eMailMessageComposingBack=activityCurrent.findViewById(R.id.email_message_composing_back);
+                        eMailMessageComposingBack.performClick();
                     });
                 } catch (Exception e) {
                     activityCurrent.runOnUiThread((Runnable) () -> {
@@ -489,12 +506,6 @@ public class EMailService  implements Animation.AnimationListener, ValueAnimator
                                 .setCustomAnimations(0, R.anim.slide_from_middle_to_right)
                                 .remove(fragmentLoadingCurrent)
                                 .commitNow();
-                        StackTraceElement[] trace=e.getStackTrace();
-                        for (StackTraceElement element:trace)
-                            System.out.println(element);
-                        activityCurrentFragmentLoadingLayout.postDelayed((Runnable) () -> {
-                            activityCurrentFragmentLoadingLayout.setVisibility(GONE);
-                        }, 300);
                     });
                 }
             });
@@ -566,12 +577,12 @@ public class EMailService  implements Animation.AnimationListener, ValueAnimator
         executor.execute((Runnable) () -> {
             try {
                 activityCurrent.runOnUiThread((Runnable) () -> {
-                            Fragment fragmentLoadingCurrent = new Connecting();
+                    Fragment fragmentLoadingCurrent = new Connecting();
                     activityCurrent.getSupportFragmentManager().beginTransaction()
-                                    .setCustomAnimations(R.anim.slide_from_right_to_middle, 0)
-                                    .add(activityCurrentFragmentLoadingLayoutId, fragmentLoadingCurrent, "connecting")
-                                    .commit();
-                        });
+                            .setCustomAnimations(R.anim.slide_from_right_to_middle, 0)
+                            .add(activityCurrentFragmentLoadingLayoutId, fragmentLoadingCurrent, "connecting")
+                            .commit();
+                });
                 Transport transport = session.getTransport();
                 transport.connect(currentUserEMailAddress, currentUserPassword);
                 activityCurrent.runOnUiThread((Runnable) () -> {
@@ -594,9 +605,9 @@ public class EMailService  implements Animation.AnimationListener, ValueAnimator
                     accountNotExist.setVisibility(VISIBLE);
                     FragmentManager activityCurrentFragmentManager=activityCurrent.getSupportFragmentManager();
                     activityCurrentFragmentManager.beginTransaction()
-                          .setCustomAnimations(0, R.anim.slide_from_middle_to_right)
-                          .remove(activityCurrentFragmentManager.findFragmentByTag("connecting"))
-                          .commit();
+                            .setCustomAnimations(0, R.anim.slide_from_middle_to_right)
+                            .remove(activityCurrentFragmentManager.findFragmentByTag("connecting"))
+                            .commit();
                 });
             }
         });
@@ -631,10 +642,7 @@ public class EMailService  implements Animation.AnimationListener, ValueAnimator
                 EMailMessage eMailMessage= loadMessage(receivedMessage);
                 eMailMessagesLoadedCurrent.add(eMailMessage);
             }
-        } catch (Exception e) {
-            StackTraceElement[] trace=e.getStackTrace();
-            for (StackTraceElement element:trace) System.out.println(element);
-        }
+        } catch (Exception e) {}
     }
 
     public static void displayMessages(int eMailMessagesLayout) {
@@ -672,8 +680,8 @@ public class EMailService  implements Animation.AnimationListener, ValueAnimator
                             .commit();
                 } else
                     activityCurrentFragmentTransaction
-                        .remove(activityCurrentFragmentManager.findFragmentByTag("load more"))
-                        .commit();
+                            .remove(activityCurrentFragmentManager.findFragmentByTag("load more"))
+                            .commit();
             });
         });
     }
@@ -711,6 +719,7 @@ public class EMailService  implements Animation.AnimationListener, ValueAnimator
             currentActivityFragmentTransaction.remove(eMailMessage);
         }
         displayedEMailMessagesCount=0;
+        System.out.println(activityCurrentFragmentManager.findFragmentByTag("load more"));
         currentActivityFragmentTransaction.remove(activityCurrentFragmentManager.findFragmentByTag("load more")).commit();
     }
 
@@ -749,7 +758,6 @@ public class EMailService  implements Animation.AnimationListener, ValueAnimator
             displayedEMailMessagesCount++;
         }
         activityCurrentFragmentTransaction.add(eMailMessagesLayoutId, new LoadMore(), "load more").commit();
-        System.out.println(eMailMessagesLoadedCurrent.size());
         eMailMessagesLoadedCurrent.clear();
     }
 
@@ -780,97 +788,99 @@ public class EMailService  implements Animation.AnimationListener, ValueAnimator
             final HashMap<String, Object> eMailMessageContentTypeAndContent=new HashMap<>();
             public void run() {
                 try {
-                Part eMailMessageContent = eMailMessageCurrent.message;
-                if (eMailMessageContent.isMimeType("multipart/*")) {
-                    System.out.println(eMailMessageContent.getContentType());
-                    Multipart eMailMessageContentMultipart=(Multipart) eMailMessageContent.getContent();
-                    int eMailMessageContentPartAmount=eMailMessageContentMultipart.getCount();
-                    for (int i=0; i<eMailMessageContentPartAmount; i++) {
-                        Part eMailMessageContentPart=eMailMessageContentMultipart.getBodyPart(i);
-                        HashMap<String, Object> partContentTypeAndContent=loadEMailMessageContent(eMailMessageContentPart);
-                        eMailMessageContentTypeAndContent.putAll(partContentTypeAndContent);
-                    }
-                } else {
-                    HashMap<String, Object> messageContentTypeAndContent = loadEMailMessageContent(eMailMessageContent);
-                    eMailMessageContentTypeAndContent.putAll(messageContentTypeAndContent);
-                }
-                activityCurrent.runOnUiThread((Runnable) () -> {
-                    LinearLayout currentEMailMessageContentLayout= activityCurrent.findViewById(R.id.email_message_open_content_layout);
-                    Iterator<Map.Entry<String, Object>> eMailMessageContentTypeAndContentIterator=eMailMessageContentTypeAndContent.entrySet().iterator();
-                    while (eMailMessageContentTypeAndContentIterator.hasNext()) {
-                        Map.Entry<String,Object> contentTypeAndContent=eMailMessageContentTypeAndContentIterator.next();
-                        String contentType=contentTypeAndContent.getKey();
-                        Object content=contentTypeAndContent.getValue();
-                        if (contentType.equals("text/plain") && !eMailMessageCurrentHasContentHtml) {
-                            TextView contentText=new TextView(activityCurrent);
-                            contentText.setText((String) content);
-                            contentText.setTextSize(20);
-                            int black= activityCurrent.getColor(R.color.black);
-                            contentText.setTextColor(black);
-                            currentEMailMessageContentLayout.addView(contentText);
-                        } else if (contentType.equals("text/html")) {
-                            WebView contentWeb=new WebView(activityCurrent);
-                            contentWeb.setWebViewClient(new WebViewClient() {
-
-                                public boolean shouldOverrideUrlLoading(WebView webView, WebResourceRequest request) {
-                                    if (request!=null) {
-                                        String currentUrlString = request.getUrl().toString();
-                                        Uri currentUri = Uri.parse(currentUrlString);
-                                        Intent intent = new Intent(Intent.ACTION_VIEW, currentUri);
-                                        Intent intentChooser=Intent.createChooser(intent, "Select an app");
-                                        activityCurrent.startActivity(intentChooser);
-                                        return true;
-                                    } else
-                                        return false;
-                                }
-
-                                public WebResourceResponse shouldInterceptRequest(WebView webView, WebResourceRequest request) {
-                                    try {
-                                        String currentUrlString = request.getUrl().toString();
-                                        if (currentUrlString.startsWith("http")) {
-                                            String correctUrlString = currentUrlString.replace("http", "https");
-                                            URL correctUrl = new URL(correctUrlString);
-                                            URLConnection correctUrlConnection = correctUrl.openConnection();
-                                            String correctUrlContentType = correctUrlConnection.getContentType();
-                                            String correctUrlContentEncoding = correctUrlConnection.getContentEncoding();
-                                            InputStream correctUrlContentInputStream = correctUrlConnection.getInputStream();
-                                            WebResourceResponse correctWebResourceResponse = new WebResourceResponse(correctUrlContentType,
-                                                    correctUrlContentEncoding,
-                                                    correctUrlContentInputStream);
-                                            return correctWebResourceResponse;
-                                        } else
-                                            return super.shouldInterceptRequest(webView, request);
-                                    } catch (Exception e) {
-                                        return null;
-                                    }
-                                }
-                            });
-                            WebSettings contentWebSettings=contentWeb.getSettings();
-                            contentWebSettings.setJavaScriptEnabled(true);
-                            contentWeb.loadData((String) content, "text/html", "base64");
-                            currentEMailMessageContentLayout.addView(contentWeb);
-                        } else if (contentType.equals("image/*")) {
-                            ImageView contentImage = new ImageView(activityCurrent);
-                            contentImage.setImageBitmap((Bitmap) content);
-                            currentEMailMessageContentLayout.addView(contentImage);
-                        } else if (contentType.equals("unknown")) {
-                            TextView unknownContentType=new TextView(activityCurrent);
-                            unknownContentType.setText(R.string.unknown_content_type);
-                            unknownContentType.setTextSize(20);
-                            int blue= activityCurrent.getColor(R.color.main_color);
-                            unknownContentType.setTextColor(blue);
-                            currentEMailMessageContentLayout.addView(unknownContentType);
+                    Part eMailMessageContent = eMailMessageCurrent.message;
+                    if (eMailMessageContent.isMimeType("multipart/*")) {
+                        Multipart eMailMessageContentMultipart=(Multipart) eMailMessageContent.getContent();
+                        int eMailMessageContentPartAmount=eMailMessageContentMultipart.getCount();
+                        for (int i=0; i<eMailMessageContentPartAmount; i++) {
+                            Part eMailMessageContentPart=eMailMessageContentMultipart.getBodyPart(i);
+                            HashMap<String, Object> partContentTypeAndContent=loadEMailMessageContent(eMailMessageContentPart);
+                            eMailMessageContentTypeAndContent.putAll(partContentTypeAndContent);
                         }
-                        activityCurrent.getSupportFragmentManager().beginTransaction()
-                                .remove(fragmentLoadingCurrent)
-                                .commit();
+                    } else {
+                        HashMap<String, Object> messageContentTypeAndContent = loadEMailMessageContent(eMailMessageContent);
+                        eMailMessageContentTypeAndContent.putAll(messageContentTypeAndContent);
                     }
-                });
-            } catch (Exception e) {
+                    activityCurrent.runOnUiThread((Runnable) () -> {
+                        LinearLayout currentEMailMessageContentLayout= activityCurrent.findViewById(R.id.email_message_open_content_layout);
+                        Iterator<Map.Entry<String, Object>> eMailMessageContentTypeAndContentIterator=eMailMessageContentTypeAndContent.entrySet().iterator();
+                        while (eMailMessageContentTypeAndContentIterator.hasNext()) {
+                            Map.Entry<String,Object> contentTypeAndContent=eMailMessageContentTypeAndContentIterator.next();
+                            String contentType=contentTypeAndContent.getKey();
+                            Object content=contentTypeAndContent.getValue();
+                            if (contentType.equals("text/plain") && !eMailMessageCurrentHasContentHtml) {
+                                TextView contentText=new TextView(activityCurrent);
+                                contentText.setText((String) content);
+                                contentText.setTextSize(20);
+                                int black= activityCurrent.getColor(R.color.black);
+                                contentText.setTextColor(black);
+                                currentEMailMessageContentLayout.addView(contentText);
+                            } else if (contentType.equals("text/html")) {
+                                WebView contentWeb=new WebView(activityCurrent);
+                                contentWeb.setWebViewClient(new WebViewClient() {
 
+                                    public boolean shouldOverrideUrlLoading(WebView webView, WebResourceRequest request) {
+                                        if (request!=null) {
+                                            String currentUrlString = request.getUrl().toString();
+                                            Uri currentUri = Uri.parse(currentUrlString);
+                                            Intent intent = new Intent(Intent.ACTION_VIEW, currentUri);
+                                            Intent intentChooser=Intent.createChooser(intent, "Select an app");
+                                            activityCurrent.startActivity(intentChooser);
+                                            return true;
+                                        } else
+                                            return false;
+                                    }
+
+                                    public WebResourceResponse shouldInterceptRequest(WebView webView, WebResourceRequest request) {
+                                        try {
+                                            String currentUrlString = request.getUrl().toString();
+                                            if (currentUrlString.startsWith("http")) {
+                                                String correctUrlString = currentUrlString.replace("http", "https");
+                                                URL correctUrl = new URL(correctUrlString);
+                                                URLConnection correctUrlConnection = correctUrl.openConnection();
+                                                String correctUrlContentType = correctUrlConnection.getContentType();
+                                                String correctUrlContentEncoding = correctUrlConnection.getContentEncoding();
+                                                InputStream correctUrlContentInputStream = correctUrlConnection.getInputStream();
+                                                WebResourceResponse correctWebResourceResponse = new WebResourceResponse(correctUrlContentType,
+                                                        correctUrlContentEncoding,
+                                                        correctUrlContentInputStream);
+                                                return correctWebResourceResponse;
+                                            } else
+                                                return super.shouldInterceptRequest(webView, request);
+                                        } catch (Exception e) {
+                                            return null;
+                                        }
+                                    }
+                                });
+                                WebSettings contentWebSettings=contentWeb.getSettings();
+                                contentWebSettings.setBuiltInZoomControls(true);
+                                contentWebSettings.setDisplayZoomControls(true);
+                                contentWebSettings.setSupportZoom(true);
+                                contentWebSettings.setJavaScriptEnabled(true);
+                                contentWeb.loadData((String) content, "text/html", "base64");
+                                currentEMailMessageContentLayout.addView(contentWeb);
+                            } else if (contentType.equals("image/*")) {
+                                ImageView contentImage = new ImageView(activityCurrent);
+                                contentImage.setImageBitmap((Bitmap) content);
+                                currentEMailMessageContentLayout.addView(contentImage);
+                            } else if (contentType.equals("unknown")) {
+                                TextView unknownContentType=new TextView(activityCurrent);
+                                unknownContentType.setText(R.string.unknown_content_type);
+                                unknownContentType.setTextSize(20);
+                                int blue= activityCurrent.getColor(R.color.main_color);
+                                unknownContentType.setTextColor(blue);
+                                currentEMailMessageContentLayout.addView(unknownContentType);
+                            }
+                            activityCurrent.getSupportFragmentManager().beginTransaction()
+                                    .remove(fragmentLoadingCurrent)
+                                    .commit();
+                        }
+                    });
+                } catch (Exception e) {
+
+                }
             }
-        }
-    });
+        });
     }
 
     private static HashMap<String, Object> loadEMailMessageContent(Part eMailMessageContentPart) throws Exception {
@@ -907,17 +917,18 @@ public class EMailService  implements Animation.AnimationListener, ValueAnimator
             partContentTypeAndContent.putAll(loadEMailMessageContent(nestedMessageContent));
             return partContentTypeAndContent;
         }
-            HashMap<String, Object> partContentTypeAndContent = new HashMap<>();
-            partContentTypeAndContent.put("unknown", null);
-            System.out.println(eMailMessageContentPart.getContentType());
-            return partContentTypeAndContent;
+        HashMap<String, Object> partContentTypeAndContent = new HashMap<>();
+        partContentTypeAndContent.put("unknown", null);
+        return partContentTypeAndContent;
     }
 
     public static void disconnectFromNetwork() {
         executor.execute((Runnable) () -> {
             try {
-                EMailService.hasLogOut=true;
-                EMailService.hasDisplayedMessages=false;
+                hasLogOut=false;
+                hasDisplayedMessages=false;
+                displayedEMailMessagesCount=0;
+                currentMainMenuScrollY=0;
                 eMailMessagesLoadedCurrent.clear();
                 if (modeMainMenuDeleting)
                     modeMainMenuDeleting =false;
@@ -1024,4 +1035,18 @@ public class EMailService  implements Animation.AnimationListener, ValueAnimator
     public void onChildViewRemoved(View parent, View view) {
 
     }
+
+    @Override
+    public void onGlobalLayout() {
+
+    }
+
+    public boolean onTouch(View view, MotionEvent event) {
+        return false;
+    }
+
+    public void onScrollChanged() {
+
+    }
+
 }
